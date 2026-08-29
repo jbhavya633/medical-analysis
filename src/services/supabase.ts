@@ -122,7 +122,11 @@ export async function fetchDatasets() {
 
 export async function createAIJob(input: { patientId: string; modalities: string[]; task: string }) {
   if (!supabase) return { data: null, error: new Error('Supabase not configured') }
-  return supabase.from('ai_jobs').insert(input).select().single()
+  return supabase.from('ai_jobs').insert({
+    patient_id: input.patientId,
+    modalities: input.modalities,
+    task: input.task
+  }).select().single()
 }
 
 export function subscribeToAIJobs(callback: (payload: any) => void) {

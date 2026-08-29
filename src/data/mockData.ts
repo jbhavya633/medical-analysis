@@ -278,6 +278,7 @@ export const MOCK_PATIENTS: Patient[] = [
         ],
         actionable: true, actions: [{ label: 'Order serial troponin', type: 'order', payload: { test: 'troponin' } }, { label: 'Cardiology consult', type: 'referral', payload: { service: 'cardiology' } }],
         priority: 'critical', status: 'new', createdAt: hoursAgo(4), modelId: 'medfusion-multimodal', modelVersion: '0.9.0',
+        recommendations: ['Order serial troponin I q6h x 3', 'Cardiology consultation for possible NSTEMI', 'Diuresis with IV furosemide', 'Rate control for AF-RVR'],
       },
       {
         id: 'ai2', type: 'treatment', title: 'Hyperkalemia protocol indicated',
@@ -285,12 +286,14 @@ export const MOCK_PATIENTS: Patient[] = [
         confidence: 0.93, evidence: [{ type: 'lab', reference: 'K 6.2, Cr 2.4', description: 'Severe hyperK with AKI', strength: 'strong' }],
         actionable: true, actions: [{ label: 'Repeat BMP in 2 hours', type: 'order', payload: { test: 'bmp' } }],
         priority: 'high', status: 'new', createdAt: hoursAgo(4), modelId: 'medfusion-cds', modelVersion: '0.9.0',
+        recommendations: ['Repeat BMP in 2 hours', 'Monitor ECG for peaked T waves', 'Hold ACE inhibitors/ARBs', 'Consider calcium gluconate if ECG changes'],
       },
       {
         id: 'ai3', type: 'interaction', title: 'Metformin held — lactic acidosis risk',
         description: 'Metformin + AKI (Cr 2.4) + lactate 3.1. Appropriately held. Do not restart until eGFR > 45 and lactate normalizes.',
         confidence: 0.96, evidence: [{ type: 'medication', reference: 'Metformin', description: 'Contraindicated in AKI', strength: 'strong' }, { type: 'lab', reference: 'Lactate 3.1', description: 'Elevated lactate', strength: 'moderate' }],
         actionable: false, priority: 'medium', status: 'acknowledged', createdAt: hoursAgo(5), acknowledgedAt: hoursAgo(4), acknowledgedBy: 'Dr. Sarah Chen', modelId: 'medfusion-cds', modelVersion: '0.9.0',
+        recommendations: ['Continue metformin hold', 'Monitor lactate q6h', 'Restart metformin only when eGFR > 45 and lactate normal'],
       },
     ],
     createdAt: daysAgo(1200),
@@ -332,6 +335,7 @@ export const MOCK_PATIENTS: Patient[] = [
       confidence: 0.81, evidence: [{ type: 'imaging', reference: 'CXR 2201', description: 'No infiltrate', strength: 'moderate' }],
       actionable: true, actions: [{ label: 'Steroid burst', type: 'medication', payload: { drug: 'prednisone' } }],
       priority: 'medium', status: 'new', createdAt: hoursAgo(2), modelId: 'medfusion-multimodal', modelVersion: '0.9.0',
+      recommendations: ['Prednisone 40mg PO daily x 5 days', 'Increase bronchodilator frequency', 'Follow-up CXR if no improvement in 48h'],
     }],
     createdAt: daysAgo(80),
     updatedAt: hoursAgo(2),
@@ -380,6 +384,7 @@ export const MOCK_PATIENTS: Patient[] = [
       confidence: 0.74, evidence: [{ type: 'imaging', reference: 'MRI 3301', description: 'Hippocampal atrophy', strength: 'strong' }],
       actionable: true, actions: [{ label: 'Order MoCA', type: 'order', payload: {} }],
       priority: 'low', status: 'new', createdAt: daysAgo(10), modelId: 'medfusion-neuro', modelVersion: '0.3.0',
+      recommendations: ['Order MoCA', 'Consult Neurology', 'Discuss amyloid PET imaging'],
     }],
     createdAt: daysAgo(500),
     updatedAt: daysAgo(10),
@@ -425,6 +430,7 @@ export const MOCK_PATIENTS: Patient[] = [
       description: 'Tumor volume 28 mL. Consider restaging after cycle 2. No distant FDG-avid disease detected by model (sensitivity limited below 8 mm).',
       confidence: 0.85, evidence: [{ type: 'imaging', reference: 'PET/CT 4410', description: 'Segmented tumor + node', strength: 'strong' }],
       actionable: true, priority: 'high', status: 'new', createdAt: daysAgo(6), modelId: 'autopet-seg', modelVersion: '2.0.0',
+      recommendations: ['Restaging after cycle 2', 'Monitor for distant FDG-avid disease', 'Continue chemotherapy protocol'],
     }],
     createdAt: daysAgo(90),
     updatedAt: daysAgo(6),
@@ -481,6 +487,7 @@ export const MOCK_PATIENTS: Patient[] = [
       description: 'Video model estimates EF 32% from A4C. Correlate with formal Simpson biplane. Start GDMT if confirmed and no contraindication.',
       confidence: 0.82, evidence: [{ type: 'imaging', reference: 'Echo 5502', description: 'AI LVEF 32%', strength: 'moderate' }],
       actionable: true, priority: 'high', status: 'new', createdAt: hoursAgo(1), modelId: 'echonet-dynamic', modelVersion: '1.0.0',
+      recommendations: ['Confirm LVEF with formal Simpson biplane', 'Initiate GDMT if confirmed', 'Cardiology referral for HFrEF management'],
     }],
     createdAt: daysAgo(2),
     updatedAt: hoursAgo(1),
@@ -504,13 +511,13 @@ export const DATASETS = [
 ]
 
 export const MODELS = [
-  { id: 'ptbxl-ecg-transformer', name: 'PTB-XL ECG Transformer', task: '12-lead ECG multi-label', metrics: { auc: 0.931, f1: 0.812 }, status: 'deployed', dataset: 'PTB-XL' },
-  { id: 'chexpert-plus-v2', name: 'CheXpert Plus Vision-Language', task: 'CXR 14-pathology + report', metrics: { auc: 0.889, f1: 0.741 }, status: 'deployed', dataset: 'CheXpert Plus' },
-  { id: 'autopet-seg', name: 'AutoPET nnU-Net', task: 'PET/CT tumor segmentation', metrics: { dice: 0.78, iou: 0.66 }, status: 'deployed', dataset: 'AutoPET-II' },
-  { id: 'echonet-dynamic', name: 'EchoNet-Dynamic', task: 'Echo LVEF regression', metrics: { mae: 4.1 }, status: 'deployed', dataset: 'EchoNet-Dynamic' },
-  { id: 'medfusion-multimodal', name: 'MedFusion Evidence Fusion', task: 'Cross-modal clinical assessment', metrics: { auc: 0.84 }, status: 'training', dataset: 'MIMIC-IV family' },
-  { id: 'medfusion-cds', name: 'MedFusion CDS Rules+LLM', task: 'Guidelines, interactions, risk', metrics: { precision: 0.91 }, status: 'deployed', dataset: 'MIMIC-IV + guidelines' },
-  { id: 'adni-brain-seg', name: 'ADNI Hippocampal Seg', task: 'MRI brain volumetry', metrics: { dice: 0.91 }, status: 'deployed', dataset: 'ADNI' },
+  { id: 'ptbxl-ecg-transformer', name: 'PTB-XL ECG Transformer', version: '1.2.0', type: 'classification', modality: ['ECG'], task: '12-lead ECG multi-label', architecture: 'Transformer', framework: 'PyTorch', inputShape: [12, 5000], outputShape: [71], metrics: { auc: 0.931, f1: 0.812 }, trainingData: ['PTB-XL'], validationData: ['PTB-XL'], testData: ['PTB-XL'], artifacts: [], createdAt: '2024-01-15', updatedAt: '2024-06-20', status: 'deployed' },
+  { id: 'chexpert-plus-v2', name: 'CheXpert Plus Vision-Language', version: '2.1.0', type: 'detection', modality: ['XRAY'], task: 'CXR 14-pathology + report', architecture: 'ResNet-50 + BERT', framework: 'PyTorch', inputShape: [3, 224, 224], outputShape: [14], metrics: { auc: 0.889, f1: 0.741 }, trainingData: ['CheXpert Plus'], validationData: ['CheXpert Plus'], testData: ['CheXpert Plus'], artifacts: [], createdAt: '2024-02-10', updatedAt: '2024-07-15', status: 'deployed' },
+  { id: 'autopet-seg', name: 'AutoPET nnU-Net', version: '1.0.0', type: 'segmentation', modality: ['PET', 'CT'], task: 'PET/CT tumor segmentation', architecture: 'nnU-Net', framework: 'PyTorch', inputShape: [2, 128, 128, 128], outputShape: [1, 128, 128, 128], metrics: { dice: 0.78, iou: 0.66 }, trainingData: ['AutoPET-II'], validationData: ['AutoPET-II'], testData: ['AutoPET-II'], artifacts: [], createdAt: '2024-03-01', updatedAt: '2024-08-01', status: 'deployed' },
+  { id: 'echonet-dynamic', name: 'EchoNet-Dynamic', version: '1.3.0', type: 'regression', modality: ['US'], task: 'Echo LVEF regression', architecture: 'R(2+1)D', framework: 'PyTorch', inputShape: [3, 16, 112, 112], outputShape: [1], metrics: { mae: 4.1 }, trainingData: ['EchoNet-Dynamic'], validationData: ['EchoNet-Dynamic'], testData: ['EchoNet-Dynamic'], artifacts: [], createdAt: '2024-01-20', updatedAt: '2024-05-30', status: 'deployed' },
+  { id: 'medfusion-multimodal', name: 'MedFusion Evidence Fusion', version: '0.9.0', type: 'multimodal', modality: ['ECG', 'XRAY', 'Clinical'], task: 'Cross-modal clinical assessment', architecture: 'Fusion Transformer', framework: 'PyTorch', inputShape: [1000], outputShape: [50], metrics: { auc: 0.84 }, trainingData: ['MIMIC-IV', 'MIMIC-CXR', 'MIMIC-IV-ECG'], validationData: ['MIMIC-IV'], testData: ['MIMIC-IV'], artifacts: [], createdAt: '2024-06-01', updatedAt: '2024-08-15', status: 'training' },
+  { id: 'medfusion-cds', name: 'MedFusion CDS Rules+LLM', version: '0.9.0', type: 'classification', modality: ['Clinical'], task: 'Guidelines, interactions, risk', architecture: 'Rules + LLM', framework: 'Custom', inputShape: [500], outputShape: [100], metrics: { precision: 0.91 }, trainingData: ['MIMIC-IV', 'Clinical Guidelines'], validationData: ['MIMIC-IV'], testData: ['MIMIC-IV'], artifacts: [], createdAt: '2024-06-15', updatedAt: '2024-08-10', status: 'deployed' },
+  { id: 'adni-brain-seg', name: 'ADNI Hippocampal Seg', version: '1.2.0', type: 'segmentation', modality: ['MR'], task: 'MRI brain volumetry', architecture: '3D U-Net', framework: 'PyTorch', inputShape: [1, 128, 128, 128], outputShape: [2, 128, 128, 128], metrics: { dice: 0.91 }, trainingData: ['ADNI'], validationData: ['ADNI'], testData: ['ADNI'], artifacts: [], createdAt: '2023-12-01', updatedAt: '2024-04-01', status: 'deployed' },
 ]
 
 export function generateECGWaveform(lead: string, seconds = 10, rate = 500, afib = false): number[] {

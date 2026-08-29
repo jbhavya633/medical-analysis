@@ -2,19 +2,18 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   AlertTriangle, Heart, Pill, Scan, FileText, AlertCircle,
-  ChevronDown, ChevronUp, Plus, Calendar, Droplets, Brain,
+  Calendar, Droplets, Brain,
   Zap, Stethoscope, Download, Search, Share2, ChevronLeft
 } from 'lucide-react'
 import { MOCK_PATIENTS } from '../data/mockData'
 import { usePatient } from '../contexts/PatientContext'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card'
+import { Card, CardHeader, CardTitle, CardDescription } from '../components/ui/Card'
 import { Badge, PriorityBadge, InterpretationBadge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { Tabs, TabList, TabTrigger, TabContent } from '../components/ui/Tabs'
-import { Input } from '../components/ui/Input'
 import { Table, Column } from '../components/ui/Table'
-import { formatRelativeTime, calculateAge, formatDate, cn, getInterpretationVariant } from '../utils/helpers'
+import { formatRelativeTime, calculateAge, formatDate, cn } from '../utils/helpers'
 import { Patient, LabResult, ImagingStudy, ClinicalNote, AIInsight } from '../types'
 import { generateECGWaveform, ECG_LEADS } from '../data/mockData'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -26,10 +25,6 @@ export function PatientDetail() {
   const { refreshPatient, getPatient, patients } = usePatient()
   const [patient, setPatient] = useState<Patient | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
-  const [showLabModal, setShowLabModal] = useState(false)
-  const [showImagingModal, setShowImagingModal] = useState(false)
-  const [showNoteModal, setShowNoteModal] = useState(false)
-  const [searchQ, setSearchQ] = useState('')
 
   useEffect(() => {
     if (patientId) {
@@ -139,7 +134,7 @@ export function PatientDetail() {
                       <div className="font-medium">{c.display}</div>
                       <div className="text-xs text-neutral-500">{c.category} · {c.status} · {c.system}</div>
                     </div>
-                    <Badge variant={c.severity === 'critical' ? 'critical' : c.severity === 'severe' ? 'warning' : 'info'} size="sm">
+                    <Badge variant={c.severity === 'severe' ? 'critical' : c.severity === 'moderate' ? 'warning' : 'info'} size="sm">
                       {c.severity}
                     </Badge>
                   </div>
@@ -155,7 +150,7 @@ export function PatientDetail() {
                 {patient.medications.filter(m => m.status === 'active').map(m => (
                   <div key={m.id} className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50">
                     <div className="min-w-0">
-                      <div className="font-medium truncate">{m.name} {m.dose} {m.route}</div>
+                      <div className="font-medium truncate">{m.name} {m.dosage} {m.route}</div>
                       <div className="text-xs text-neutral-500">{m.frequency} · {m.indication}</div>
                     </div>
                     <Badge size="sm" variant={m.status === 'active' ? 'success' : 'warning'}>{m.status}</Badge>
@@ -181,7 +176,7 @@ export function PatientDetail() {
                       <div className="font-medium truncate">{i.title}</div>
                       <PriorityBadge priority={i.priority} size="sm" />
                     </div>
-                    <div className="text-sm text-neutral-500 mt-1 truncate">{i.summary}</div>
+                    <div className="text-sm text-neutral-500 mt-1 truncate">{i.description}</div>
                     <div className="flex items-center gap-3 mt-2 text-xs text-neutral-400">
                       <span>Type: {i.type}</span>
                       <span>Confidence: {Math.round(i.confidence * 100)}%</span>
@@ -343,7 +338,7 @@ function renderEvent(ev: any) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Icon className="h-4 w-4 text-medical-500" />
-              <div className="font-medium">{ev.name} {ev.dose} {ev.route}</div>
+              <div className="font-medium">{ev.name} {ev.dosage} {ev.route}</div>
             </div>
             <Badge size="sm" variant={ev.status === 'active' ? 'success' : 'warning'}>{ev.status}</Badge>
           </div>
@@ -358,7 +353,7 @@ function renderEvent(ev: any) {
               <Icon className="h-4 w-4 text-warning-500" />
               <div className="font-medium">{ev.display}</div>
             </div>
-            <Badge size="sm" variant={ev.severity === 'critical' ? 'critical' : 'warning'}>{ev.severity}</Badge>
+            <Badge size="sm" variant={ev.severity === 'severe' ? 'critical' : ev.severity === 'moderate' ? 'warning' : 'info'}>{ev.severity}</Badge>
           </div>
           <div className="text-sm text-neutral-500 mt-1">{ev.category} · onset {formatDate(ev.onsetDate)}</div>
         </div>
@@ -435,7 +430,7 @@ function AIInsightsTable({ patient }: { patient: Patient }) {
                   </div>
                 </div>
               </div>
-              <div className="text-sm text-neutral-600 dark:text-neutral-400">{insight.summary}</div>
+              <div className="text-sm text-neutral-600 dark:text-neutral-400">{insight.description}</div>
               {insight.recommendations.length > 0 && (
                 <div className="mt-3 space-y-1">
                   {insight.recommendations.map((r, i) => (
@@ -449,7 +444,7 @@ function AIInsightsTable({ patient }: { patient: Patient }) {
                 <details className="mt-3">
                   <summary className="text-sm text-medical-600 cursor-pointer">Evidence sources ({insight.evidence.length})</summary>
                   <ul className="mt-2 space-y-1 text-xs text-neutral-500">
-                    {insight.evidence.map(e => <li key={e.sourceId}>{e.modality} · {e.sourceId} (weight {e.weight})</li>)}
+                    {insight.evidence.map((e, i) => <li key={i}>{e.type} · {e.reference} (strength {e.strength})</li>)}
                   </ul>
                 </details>
               )}

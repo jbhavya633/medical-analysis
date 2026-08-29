@@ -6,10 +6,11 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   size?: 'sm' | 'md' | 'lg'
   dot?: boolean
   dotColor?: string
+  leftIcon?: React.ReactNode
 }
 
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ className, variant = 'default', size = 'md', dot, dotColor, children, ...props }, ref) => {
+  ({ className, variant = 'default', size = 'md', dot, dotColor, leftIcon, children, ...props }, ref) => {
     const variantClasses = {
       default: 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200',
       medical: 'bg-medical-100 text-medical-800 dark:bg-medical-900/30 dark:text-medical-200',
@@ -45,6 +46,7 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
             style={dotColor ? { backgroundColor: dotColor } : undefined}
           />
         )}
+        {leftIcon && <span className="flex-shrink-0">{leftIcon}</span>}
         {children}
       </span>
     )

@@ -1,19 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import {
-  ZoomIn, ZoomOut, RotateCw, RotateCcw, Move, Maximize, Minimize,
-  ChevronLeft, ChevronRight, Search, Eye, EyeOff, Layers, Download, Info,
-  ArrowLeft, ArrowRight, Grid, FilePlus, FileText, Brain
+  ZoomIn, ZoomOut, RotateCw, RotateCcw, Minimize,
+  ChevronLeft, Search, Layers, Download, Info,
+  Grid, FilePlus, FileText, Brain
 } from 'lucide-react'
 import { MOCK_PATIENTS } from '../data/mockData'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { Modal } from '../components/ui/Modal'
-import { Tabs, TabList, TabTrigger, TabContent } from '../components/ui/Tabs'
-import { Input } from '../components/ui/Input'
-import { cn, formatDate, formatRelativeTime, getModalityColor } from '../utils/helpers'
-import { ImagingStudy, ImagingSeries, ImagingInstance, AIFinding } from '../types'
+import { cn, formatDate, formatRelativeTime } from '../utils/helpers'
+import { ImagingStudy, ImagingSeries, ImagingInstance } from '../types'
 
 export function ImagingViewer() {
   const { patientId } = useParams<{ patientId: string }>()
@@ -69,18 +65,7 @@ export function ImagingViewer() {
     }
   }, [searchParams, studies])
 
-  const handleInstanceClick = (instance: ImagingInstance, series: ImagingSeries, study: ImagingStudy) => {
-    setSelectedInstance(instance)
-    setSelectedSeries(series)
-    setSelectedStudy(study)
-  }
-
-  const handleWindowLevel = (e: React.MouseEvent) => {
-    if (!selectedInstance) return
-    // Mock window/level adjustment
-  }
-
-  const seriesForStudy = selectedStudy?.series || []
+  // const seriesForStudy = selectedStudy?.series || []
 
   return (
     <div className="h-full flex flex-col">
@@ -93,8 +78,8 @@ export function ImagingViewer() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" leftIcon={<FilePlus className="h-4 w-4" />}>Upload DICOM</Button>
-            <Button variant="outline" size="sm" leftIcon={<Download className="h-4 w-4" />}>Export</Button>
+            <Button variant="secondary" size="sm" leftIcon={<FilePlus className="h-4 w-4" />}>Upload DICOM</Button>
+            <Button variant="secondary" size="sm" leftIcon={<Download className="h-4 w-4" />}>Export</Button>
           </div>
         </div>
 
@@ -108,10 +93,10 @@ export function ImagingViewer() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')}>
+            <Button variant={viewMode === 'grid' ? 'primary' : 'outline'} size="icon" onClick={() => setViewMode('grid')}>
               <Grid className="h-4 w-4" />
             </Button>
-            <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
+            <Button variant={viewMode === 'list' ? 'primary' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
               <FileText className="h-4 w-4" />
             </Button>
             <Button variant="outline" size="icon" onClick={() => setShowMetadata(!showMetadata)}>
@@ -149,7 +134,7 @@ export function ImagingViewer() {
                 <div className="text-sm font-medium mt-1 truncate">{study.description}</div>
                 <div className="flex items-center justify-between mt-2 text-xs text-neutral-500">
                   <span>{formatDate(study.studyDate)}</span>
-                  <Badge size="sm" variant={study.status === 'final' ? 'success' : 'warning'}>{study.status}</Badge>
+                  <Badge size="sm" variant={study.status === 'completed' ? 'success' : 'warning'}>{study.status}</Badge>
                 </div>
                 {study.aiFindings && study.aiFindings.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -182,7 +167,8 @@ export function ImagingViewer() {
               </div>
               <div className="flex items-center gap-2">
                 {selectedStudy.aiFindings && selectedStudy.aiFindings.length > 0 && (
-                  <Badge variant="clinical" className="gap-1" leftIcon={<Brain className="h-3 w-3" />}>
+                  <Badge variant="clinical" className="gap-1">
+                    <Brain className="h-3 w-3" />
                     {selectedStudy.aiFindings.length} AI findings
                   </Badge>
                 )}
@@ -210,7 +196,7 @@ export function ImagingViewer() {
           )}
 
           <div className="flex-1 flex relative overflow-hidden">
-            {selectedInstance ? (
+            {selectedInstance && selectedSeries ? (
               <>
                 <div className="flex-1 flex items-center justify-center relative bg-neutral-900">
                   <div className={cn(
@@ -289,9 +275,9 @@ export function ImagingViewer() {
             )}
           </div>
 
-          {selectedInstance && (
+          {selectedInstance && selectedSeries && (
             <div className="h-20 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center gap-2 px-4 overflow-x-auto">
-              {selectedSeries.instances.map((inst, i) => (
+              {selectedSeries.instances.map(inst => (
                 <button
                   key={inst.id}
                   onClick={() => setSelectedInstance(inst)}
@@ -405,7 +391,6 @@ function MockDicomDisplay({ instance, series, overlay }: { instance: ImagingInst
 }
 
 function MockThumbnail({ instance }: { instance: ImagingInstance }) {
-  const [seed] = useState(Math.random() * 1000)
   return (
     <svg width="100%" height="100%" viewBox="0 0 64 64">
       <rect width="64" height="64" fill="#0f0f1a" />

@@ -50,7 +50,8 @@ export interface Patient {
   labResults: LabResult[]
   imagingStudies: ImagingStudy[]
   ecgStudies: ECGStudy[]
-  notes: ClinicalNote[]
+  clinicalNotes: ClinicalNote[]
+  admission?: { admissionDate: string }
   riskScores: RiskScore[]
   aiInsights: AIInsight[]
   createdAt: string
@@ -107,6 +108,7 @@ export interface Medication {
   name: string
   genericName?: string
   dosage: string
+  dose?: string
   route: string
   frequency: string
   startDate: string
@@ -128,6 +130,7 @@ export interface Condition {
   resolvedDate?: string
   clinicalStatus: 'active' | 'recurrence' | 'relapse' | 'inactive' | 'remission' | 'resolved'
   verificationStatus: 'unconfirmed' | 'provisional' | 'differential' | 'confirmed' | 'refuted' | 'entered-in-error'
+  system?: string
 }
 
 export interface Encounter {
@@ -183,8 +186,10 @@ export interface VitalSigns {
   heartRate?: number
   respiratoryRate?: number
   bloodPressureSystolic?: number
+  systolicBP?: number
   bloodPressureDiastolic?: number
   oxygenSaturation?: number
+  spo2?: number
   weight?: number
   height?: number
   bmi?: number
@@ -218,6 +223,7 @@ export interface LabResult {
   components?: LabComponent[]
   loincCode?: string
   snomedCode?: string
+  delta?: number
 }
 
 export interface ReferenceRange {
@@ -306,6 +312,8 @@ export interface ImagingInstance {
   sliceLocation?: number
   acquisitionDateTime?: string
   contentDateTime?: string
+  aiAnnotations?: any[]
+  metadata?: Record<string, unknown>
 }
 
 export interface ImagingReport {
@@ -474,6 +482,8 @@ export interface AIInsight {
   acknowledgedBy?: string
   modelId: string
   modelVersion: string
+  summary?: string
+  recommendations: string[]
 }
 
 export interface AIInsightEvidence {
@@ -481,6 +491,9 @@ export interface AIInsightEvidence {
   reference: string
   description: string
   strength: 'weak' | 'moderate' | 'strong'
+  sourceId?: string
+  modality?: string
+  weight?: number
 }
 
 export interface AIInsightAction {
@@ -640,4 +653,200 @@ export interface ApiError {
   details?: Record<string, unknown>
   timestamp: string
   requestId: string
+}
+
+export interface LabTrend {
+  testName: string
+  values: { t: string; v: number }[]
+  delta: number
+}
+
+export interface LabPanel {
+  id: string
+  name: string
+  category: string
+}
+
+export interface LabCategory {
+  id: string
+  name: string
+}
+
+export interface AIAnalysisJob {
+  id: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  studyId: string
+  modelId: string
+  createdAt: string
+  startedAt?: string
+  completedAt?: string
+  error?: string
+}
+
+export interface AIAnalysisResult {
+  id: string
+  jobId: string
+  findings: AIFinding[]
+  summary: string
+  confidence: number
+  processingTime: number
+  createdAt: string
+}
+
+export interface ECGMeasurements {
+  heartRate: number
+  prInterval: number
+  qrsDuration: number
+  qtInterval: number
+  qtcInterval: number
+  pAxis: number
+  qrsAxis: number
+  tAxis: number
+}
+
+export interface ECGAIAnalysisJob {
+  id: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  studyId: string
+  createdAt: string
+  startedAt?: string
+  completedAt?: string
+  error?: string
+}
+
+export interface ECGAIAnalysisResult {
+  id: string
+  jobId: string
+  abnormalities: ECGAbnormality[]
+  overallConfidence: number
+  processingTime: number
+  createdAt: string
+}
+
+export interface ECGComparison {
+  id: string
+  studyIds: string[]
+  differences: Record<string, unknown>
+  createdAt: string
+}
+
+export interface AIInferenceResult {
+  id: string
+  modelId: string
+  input: Record<string, unknown>
+  output: Record<string, unknown>
+  confidence: number
+  processingTime: number
+  createdAt: string
+}
+
+export interface AIInsightFeedback {
+  id: string
+  insightId: string
+  rating: 'helpful' | 'not-helpful' | 'incorrect' | 'partially-correct'
+  comment?: string
+  createdAt: string
+  createdBy: string
+}
+
+export interface AIExplanation {
+  id: string
+  insightId: string
+  explanation: string
+  featureImportance: Record<string, number>
+  counterfactuals: Array<{ feature: string; value: unknown; effect: number }>
+  generatedAt: string
+}
+
+export interface ClinicalGuideline {
+  id: string
+  code: string
+  title: string
+  description: string
+  category: string
+  evidenceLevel: 'A' | 'B' | 'C' | 'D'
+  recommendations: Array<{
+    id: string
+    text: string
+    strength: 'strong' | 'conditional'
+    quality: 'high' | 'moderate' | 'low' | 'very-low'
+  }>
+  references: string[]
+  updatedAt: string
+  source: string
+}
+
+export interface DrugInteraction {
+  id: string
+  drugA: string
+  drugB: string
+  severity: 'minor' | 'moderate' | 'major' | 'contraindicated'
+  description: string
+  mechanism?: string
+  management?: string
+  references: string[]
+}
+
+export interface RiskScoreDefinition {
+  id: string
+  name: string
+  description: string
+  category: string
+  variables: Array<{
+    name: string
+    type: 'numeric' | 'categorical' | 'binary'
+    description: string
+    required: boolean
+    options?: string[]
+  }>
+  formula: string
+  interpretation: Array<{
+    range: [number, number]
+    label: string
+    risk: 'low' | 'moderate' | 'high' | 'very-high'
+  }>
+  references: string[]
+  validation: {
+    population: string
+    sampleSize: number
+    cStatistic: number
+    calibration: string
+  }
+}
+
+export interface AllergyCheckResult {
+  id: string
+  patientId: string
+  substance: string
+  hasAllergy: boolean
+  allergies: Allergy[]
+  crossReactivities: string[]
+  checkedAt: string
+}
+
+export interface OrderSet {
+  id: string
+  name: string
+  description: string
+  conditionCode?: string
+  category: string
+  orders: Array<{
+    id: string
+    type: 'medication' | 'lab' | 'imaging' | 'consultation' | 'procedure' | 'diet' | 'activity'
+    details: Record<string, unknown>
+    priority: 'routine' | 'urgent' | 'stat'
+    condition?: string
+  }>
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+  version: number
+}
+
+export interface SystemHealth {
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  services: Record<string, { status: 'up' | 'down' | 'degraded'; latency?: number }>
+  version: string
+  uptime: number
+  timestamp: string
 }

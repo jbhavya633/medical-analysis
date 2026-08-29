@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 import {
-  Users, AlertTriangle, Activity, Scan, FlaskConical, Brain,
+  Users, AlertTriangle, Scan, FlaskConical, Brain,
   ArrowUpRight, HeartPulse, Database, Cpu
 } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card'
+import { Card, CardHeader, CardTitle, CardDescription } from '../components/ui/Card'
 import { Badge, PriorityBadge } from '../components/ui/Badge'
 import { MOCK_PATIENTS, DATASETS, MODELS } from '../data/mockData'
 import { formatRelativeTime, calculateAge, cn } from '../utils/helpers'
@@ -210,7 +210,7 @@ export function Dashboard() {
               <div key={m.id} className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50">
                 <div>
                   <div className="text-sm font-medium">{m.name}</div>
-                  <div className="text-xs text-neutral-500">{m.task} · {m.dataset}</div>
+                  <div className="text-xs text-neutral-500">{m.task} · {m.trainingData[0] || 'N/A'}</div>
                 </div>
                 <div className="text-right">
                   <Badge variant={m.status === 'deployed' ? 'success' : 'clinical'} size="sm">{m.status}</Badge>

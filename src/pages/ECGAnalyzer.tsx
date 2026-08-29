@@ -1,25 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import {
-  Zap, HeartPulse, Activity, RotateCw, RotateCcw,
-  ZoomIn, ZoomOut, Minimize, Download, Search, Filter,
-  AlertTriangle, CheckCircle, Brain, ChevronDown, ChevronUp, ChevronLeft, ChevronRight
-} from 'lucide-react'
+import { HeartPulse, Download, Brain, ChevronLeft, ChevronRight } from 'lucide-react'
 import { MOCK_PATIENTS, generateECGWaveform, ECG_LEADS } from '../data/mockData'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card'
-import { Badge, PriorityBadge } from '../components/ui/Badge'
+import { Card, CardHeader, CardTitle, CardDescription } from '../components/ui/Card'
+import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { Modal } from '../components/ui/Modal'
-import { Tabs, TabList, TabTrigger, TabContent } from '../components/ui/Tabs'
-import { Input } from '../components/ui/Input'
-import { Table, Column } from '../components/ui/Table'
-import { ProgressBar, Progress } from '../components/ui/ProgressBar'
+import { ProgressBar } from '../components/ui/ProgressBar'
 import { cn, formatRelativeTime, calculateAge } from '../utils/helpers'
 import { ECGStudy } from '../types'
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, Dot
-} from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 export function ECGAnalyzer() {
   const { patientId } = useParams<{ patientId: string }>()
@@ -28,12 +17,21 @@ export function ECGAnalyzer() {
   const [speed, setSpeed] = useState(25) // mm/s
   const [gain, setGain] = useState(10) // mm/mV
   const [selectedStudy, setSelectedStudy] = useState<ECGStudy | null>(null)
-  const [measurements, setMeasurements] = useState<Record<string, number>>({})
-  const [aiAnalysis, setAiAnalysis] = useState<any>(null)
+  const [aiAnalysis, setAiAnalysis] = useState<{
+    rhythm: string
+    rhythmConfidence: number
+    intervals: Record<string, { value: number; normal: boolean }>
+    axes: Record<string, number>
+    hypertrophy: { lvh: boolean; rvh: boolean }
+    ischemia: { stElevation: string[]; stDepression: string[]; tInversion: string[] }
+    ptbxlClasses: Record<string, number>
+    processingTimeMs: number
+    modelVersion: string
+  } | null>(null)
   const [runningAI, setRunningAI] = useState(false)
 
   const patient = patientId ? MOCK_PATIENTS.find(p => p.id === patientId) : null
-  const studies = patient?.ecgStudies || MOCK_PATIENTS.flatMap(p => p.ecgStudies.map(s => ({ ...s, patient: p })))
+  const studies: (ECGStudy & { patient?: typeof patient })[] = patient?.ecgStudies.map(s => ({ ...s, patient })) || MOCK_PATIENTS.flatMap(p => p.ecgStudies.map(s => ({ ...s, patient: p })))
 
   useEffect(() => {
     if (studies.length > 0) setSelectedStudy(studies[0])
@@ -240,7 +238,7 @@ export function ECGAnalyzer() {
             <div className="p-3 rounded-xl bg-clinical-50 dark:bg-clinical-900/20">
               <div className="text-xs text-clinical-600 dark:text-clinical-400">Rhythm classification</div>
               <div className="font-mono font-medium text-lg mt-1">{aiAnalysis.rhythm.toUpperCase()}</div>
-              <Progress value={aiAnalysis.rhythmConfidence * 100} max={100} className="mt-1 h-1.5" color="clinical" />
+              <ProgressBar value={aiAnalysis.rhythmConfidence * 100} max={100} className="mt-1" size="sm" variant="clinical" showLabel={false} />
             </div>
             <div className="p-3 rounded-xl bg-clinical-50 dark:bg-clinical-900/20">
               <div className="text-xs text-clinical-600 dark:text-clinical-400">Intervals</div>
@@ -277,7 +275,7 @@ export function ECGAnalyzer() {
                 {Object.entries(aiAnalysis.ptbxlClasses).map(([k, v]) => (
                   <div key={k} className="flex items-center justify-between text-sm">
                     <span className="capitalize">{k}</span>
-                    <Progress value={v * 100} max={100} className="w-24 h-1.5" color={k === 'afib' ? 'critical' : 'clinical'} showLabel={false} />
+                    <ProgressBar value={v * 100} max={100} className="w-24" size="sm" variant={k === 'afib' ? 'critical' : 'clinical'} showLabel={false} />
                     <span className="font-mono text-xs ml-2">{Math.round(v * 100)}%</span>
                   </div>
                 ))}
@@ -304,26 +302,47 @@ export function ECGAnalyzer() {
         <CardHeader className="mb-2">
           <CardTitle>Available ECG studies</CardTitle>
         </CardHeader>
-        <Table
-          data={studies.map(s => ({
-            ...s,
-            patientName: s.patient ? `${s.patient.lastName}, ${s.patient.firstName}` : '—',
-            status: s.rhythm === 'sinus' ? 'normal' : 'abnormal',
-          }))}
-          columns={[
-            { key: 'id', header: 'Study ID', accessor: s => s.id },
-            { key: 'patientName', header: 'Patient', accessor: s => s.patientName },
-            { key: 'acquiredAt', header: 'Acquired', accessor: s => s.acquiredAt, sortable: true, render: v => formatRelativeTime(String(v)) },
-            { key: 'rhythm', header: 'Rhythm', accessor: s => s.rhythm, render: v => <Badge variant={v === 'sinus' ? 'success' : 'critical'}>{String(v).toUpperCase()}</Badge> },
-            { key: 'heartRate', header: 'HR', accessor: s => `${s.heartRate} bpm` },
-            { key: 'qrsDuration', header: 'QRS', accessor: s => `${s.qrsDuration} ms` },
-            { key: 'qtcInterval', header: 'QTc', accessor: s => `${s.qtcInterval} ms` },
-            { key: 'status', header: 'Status', accessor: s => s.status, render: v => <Badge variant={v === 'normal' ? 'success' : 'warning'}>{String(v)}</Badge> },
-          ]}
-          keyExtractor={s => s.id}
-          onRowClick={s => setSelectedStudy(s)}
-          emptyMessage="No ECG studies"
-        />
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                <th className="px-4 py-3 text-left font-medium text-neutral-500">Study ID</th>
+                <th className="px-4 py-3 text-left font-medium text-neutral-500">Patient</th>
+                <th className="px-4 py-3 text-left font-medium text-neutral-500">Acquired</th>
+                <th className="px-4 py-3 text-left font-medium text-neutral-500">Rhythm</th>
+                <th className="px-4 py-3 text-left font-medium text-neutral-500">HR</th>
+                <th className="px-4 py-3 text-left font-medium text-neutral-500">QRS</th>
+                <th className="px-4 py-3 text-left font-medium text-neutral-500">QTc</th>
+                <th className="px-4 py-3 text-left font-medium text-neutral-500">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {studies.map(s => (
+                <tr
+                  key={s.id}
+                  onClick={() => setSelectedStudy(s)}
+                  className="cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800"
+                >
+                  <td className="px-4 py-3 font-mono text-neutral-900 dark:text-neutral-100">{s.id}</td>
+                  <td className="px-4 py-3">{s.patient ? `${s.patient.lastName}, ${s.patient.firstName}` : '—'}</td>
+                  <td className="px-4 py-3 text-neutral-500">{formatRelativeTime(s.acquiredAt)}</td>
+                  <td className="px-4 py-3"><Badge variant={s.rhythm === 'sinus' ? 'success' : 'critical'}>{s.rhythm.toUpperCase()}</Badge></td>
+                  <td className="px-4 py-3 font-mono">{s.heartRate} bpm</td>
+                  <td className="px-4 py-3 font-mono">{s.qrsDuration} ms</td>
+                  <td className="px-4 py-3 font-mono">{s.qtcInterval} ms</td>
+                  <td className="px-4 py-3"><Badge variant={s.rhythm === 'sinus' ? 'success' : 'warning'}>
+                    {s.rhythm === 'sinus' ? 'Normal' : 'Abnormal'}
+                  </Badge></td>
+                </tr>
+              ))}
+              {studies.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-neutral-400">No ECG studies</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </Card>
     </div>
   )

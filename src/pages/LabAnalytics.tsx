@@ -1,20 +1,18 @@
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
-  TrendingUp, TrendingDown, Minus, AlertCircle, Search, Filter,
+  TrendingUp, TrendingDown, AlertCircle, Search,
   Download, Calendar, BarChart2, FlaskConical
 } from 'lucide-react'
 import { MOCK_PATIENTS } from '../data/mockData'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card'
-import { Badge, InterpretationBadge } from '../components/ui/Badge'
+import { Card, CardHeader, CardTitle, CardDescription } from '../components/ui/Card'
+import { InterpretationBadge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { Input } from '../components/ui/Input'
 import { Table, Column, Pagination } from '../components/ui/Table'
-import { Tabs, TabList, TabTrigger, TabContent } from '../components/ui/Tabs'
-import { cn, formatDate, formatRelativeTime, getInterpretationVariant, calculateAge } from '../utils/helpers'
+import { cn, formatDate, formatRelativeTime } from '../utils/helpers'
+import { LabResult } from '../types'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
-  LineChart, Line, Dot, ScatterChart, Scatter, XAxis as ScatterXAxis, YAxis as ScatterYAxis
 } from 'recharts'
 
 export function LabAnalytics() {
@@ -26,10 +24,10 @@ export function LabAnalytics() {
 
   const patient = patientId ? MOCK_PATIENTS.find(p => p.id === patientId) : null
   interface LabWithPatient extends LabResult {
-  patient?: { id: string; lastName: string; firstName: string; mrn: string }
-}
+    patient?: { id: string; lastName: string; firstName: string; mrn: string }
+  }
 
-const allLabs: LabWithPatient[] = patient?.labResults || MOCK_PATIENTS.flatMap(p => p.labResults.map(l => ({ ...l, patient: { id: p.id, lastName: p.lastName, firstName: p.firstName, mrn: p.mrn } })))
+  const allLabs: LabWithPatient[] = (patient?.labResults as LabWithPatient[]) || MOCK_PATIENTS.flatMap(p => p.labResults.map(l => ({ ...l, patient: { id: p.id, lastName: p.lastName, firstName: p.firstName, mrn: p.mrn } })))
 
   const filtered = useMemo(() => {
     let rows = allLabs
@@ -39,7 +37,7 @@ const allLabs: LabWithPatient[] = patient?.labResults || MOCK_PATIENTS.flatMap(p
     else if (timeRange === '7d') cutoff.setDate(cutoff.getDate() - 7)
     else if (timeRange === '30d') cutoff.setDate(cutoff.getDate() - 30)
 
-    rows = rows.filter(l => new Date(l.collectedAt) >= cutoff)
+    rows = rows.filter(l => l.collectedAt && new Date(l.collectedAt) >= cutoff)
     if (searchQ) rows = rows.filter(l =>
       l.testName.toLowerCase().includes(searchQ.toLowerCase()) ||
       l.value.toString().includes(searchQ) ||
@@ -60,7 +58,7 @@ const allLabs: LabWithPatient[] = patient?.labResults || MOCK_PATIENTS.flatMap(p
     filtered.forEach(l => {
       const key = l.testName
       if (!groups.has(key)) groups.set(key, { testName: l.testName, values: [] })
-      groups.get(key)!.values.push({ t: formatDate(l.collectedAt), v: l.value })
+      groups.get(key)!.values.push({ t: formatDate(l.collectedAt || new Date().toISOString()), v: typeof l.value === 'number' ? l.value : parseFloat(l.value as string) })
     })
     return Array.from(groups.values()).map(g => ({
       ...g,
@@ -81,7 +79,7 @@ const allLabs: LabWithPatient[] = patient?.labResults || MOCK_PATIENTS.flatMap(p
     )},
     { key: 'ref', header: 'Reference', accessor: l => `${l.referenceRange.low}–${l.referenceRange.high} ${l.referenceRange.unit}` },
     { key: 'interpretation', header: 'Flag', accessor: l => l.interpretation, render: (_, l) => <InterpretationBadge interpretation={l.interpretation} /> },
-    { key: 'delta', header: 'Δ', accessor: l => l.delta, render: v => v !== undefined ? (
+    { key: 'delta', header: 'Δ', accessor: l => l.delta, render: (v: number | undefined, l) => l.delta !== undefined ? (
       <span className={cn('font-mono font-medium', v > 0 ? 'text-critical-600' : v < 0 ? 'text-medical-600' : 'text-neutral-500')}>
         {v > 0 ? '+' : ''}{v.toFixed(1)}
       </span>

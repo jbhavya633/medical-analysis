@@ -81,7 +81,7 @@ function mapSupabasePatient(sbPatient: any): Patient {
     labResults: sbPatient.lab_results || [],
     imagingStudies: sbPatient.imaging_studies || [],
     ecgStudies: sbPatient.ecg_studies || [],
-    notes: sbPatient.notes || sbPatient.clinical_notes || [],
+    clinicalNotes: sbPatient.clinical_notes || [],
     riskScores: sbPatient.risk_scores || [],
     aiInsights: sbPatient.ai_insights || [],
     createdAt: sbPatient.created_at,
@@ -210,24 +210,21 @@ export function PatientProvider({ children }: { children: ReactNode }) {
     setError(null)
     try {
       if (useSupabase && supabase) {
-        const { data, error: supabaseError } = await supabase
+        const insertData = {
+          mrn: patientData.mrn,
+          first_name: patientData.firstName,
+          last_name: patientData.lastName,
+          date_of_birth: patientData.dateOfBirth,
+          sex: patientData.sex,
+          attending_physician: patientData.primaryCareProvider?.name || null,
+        }
+        const { data, error: supabaseError } = await (supabase as any)
           .from('patients')
-          .insert({
-            mrn: patientData.mrn,
-            first_name: patientData.firstName,
-            last_name: patientData.lastName,
-            date_of_birth: patientData.dateOfBirth,
-            sex: patientData.sex,
-            email: patientData.email,
-            phone: patientData.phone,
-            address: patientData.address as any,
-            insurance: patientData.insurance as any,
-            attending_physician: patientData.primaryCareProvider?.name || null,
-          })
+          .insert(insertData)
           .select()
           .single()
         if (supabaseError) throw supabaseError
-        const mapped = mapSupabasePatient(data as any)
+        const mapped = mapSupabasePatient(data)
         setPatients(prev => [mapped, ...prev])
         return mapped
       }
@@ -240,7 +237,7 @@ export function PatientProvider({ children }: { children: ReactNode }) {
         labResults: [],
         imagingStudies: [],
         ecgStudies: [],
-        notes: [],
+        clinicalNotes: [],
         medications: [],
         conditions: [],
         aiInsights: [],
@@ -262,22 +259,18 @@ export function PatientProvider({ children }: { children: ReactNode }) {
     setError(null)
     try {
       if (useSupabase && supabase) {
-        const updateData: Record<string, any> = {}
+        const updateData: Record<string, unknown> = {}
         if (data.mrn) updateData.mrn = data.mrn
         if (data.firstName) updateData.first_name = data.firstName
         if (data.lastName) updateData.last_name = data.lastName
         if (data.dateOfBirth) updateData.date_of_birth = data.dateOfBirth
         if (data.sex) updateData.sex = data.sex
-        if (data.email) updateData.email = data.email
-        if (data.phone) updateData.phone = data.phone
-        if (data.address) updateData.address = data.address
-        if (data.insurance) updateData.insurance = data.insurance
         if (data.primaryCareProvider) updateData.attending_physician = data.primaryCareProvider?.name || null
         updateData.updated_at = new Date().toISOString()
 
-        const { data: updatedData, error: supabaseError } = await supabase
+        const { data: updatedData, error: supabaseError } = await (supabase as any)
           .from('patients')
-          .update(updateData as any)
+          .update(updateData)
           .eq('id', id)
           .select()
           .single()
@@ -419,7 +412,7 @@ export function PatientProvider({ children }: { children: ReactNode }) {
       return data || []
     }
     const patient = MOCK_PATIENTS.find(p => p.id === patientId)
-    return patient?.notes || []
+    return patient?.clinicalNotes || []
   }, [useSupabase])
 
   const fetchMedications = useCallback(async (patientId: string) => {
@@ -553,9 +546,9 @@ export function PatientProvider({ children }: { children: ReactNode }) {
 
   const acknowledgeAIInsight = useCallback(async (patientId: string, insightId: string) => {
     if (useSupabase && supabase) {
-      await supabase
+      await (supabase as any)
         .from('ai_insights')
-        .update({ status: 'reviewed', reviewed_at: new Date().toISOString() } as any)
+        .update({ status: 'reviewed', reviewed_at: new Date().toISOString() })
         .eq('id', insightId)
     }
     if (currentPatient) {
@@ -566,9 +559,9 @@ export function PatientProvider({ children }: { children: ReactNode }) {
 
   const dismissAIInsight = useCallback(async (patientId: string, insightId: string) => {
     if (useSupabase && supabase) {
-      await supabase
+      await (supabase as any)
         .from('ai_insights')
-        .update({ status: 'dismissed', reviewed_at: new Date().toISOString() } as any)
+        .update({ status: 'dismissed', reviewed_at: new Date().toISOString() })
         .eq('id', insightId)
     }
     if (currentPatient) {

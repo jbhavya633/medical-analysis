@@ -1,16 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
-  User, Bell, Shield, Palette, Database, Bot, Plug,
-  Download, Check, X, Plus, Key, Eye, EyeOff, Lock,
-  Globe, Wifi, Server, RefreshCw, Save, Trash2,
+  User, Bell, Shield, Palette, Database, Plug,
+  Download, Check, X, Plus, Key, Lock,
+  Globe, Wifi, Server, Save, Trash2,
   AlertTriangle, Brain, Zap, Scan, Calendar
 } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/Card'
+import { Card, CardHeader, CardTitle, CardDescription } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Badge } from '../components/ui/Badge'
-import { Modal } from '../components/ui/Modal'
-import { Tabs, TabList, TabTrigger, TabContent } from '../components/ui/Tabs'
 import { Switch } from '../components/ui/Switch'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAuth } from '../hooks/useAuth'
@@ -303,7 +301,7 @@ export function Settings() {
                 <div key={m.id} className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50">
                   <div>
                     <div className="font-medium">{m.name}</div>
-                    <div className="text-xs text-neutral-500">{m.task} · {m.dataset}</div>
+                    <div className="text-xs text-neutral-500">{m.task} · {m.trainingData[0]}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={m.status === 'deployed' ? 'success' : 'clinical'} size="sm">{m.status}</Badge>
