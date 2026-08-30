@@ -247,7 +247,7 @@ export const MOCK_PATIENTS: Patient[] = [
         acquiredAt: hoursAgo(7),
       },
     ],
-    notes: [
+    clinicalNotes: [
       {
         id: 'n1',
         type: 'admission',
@@ -327,7 +327,7 @@ export const MOCK_PATIENTS: Patient[] = [
       aiFindings: [{ id: 'f5', modelId: 'chexpert-plus-v2', modelVersion: '2.1.0', finding: 'Hyperinflation, no infiltrate', confidence: 0.77, category: 'other', severity: 'low', status: 'pending', createdAt: hoursAgo(2) }],
     }],
     ecgStudies: [],
-    notes: [],
+    clinicalNotes: [],
     riskScores: [{ id: 'rs4', name: 'CURB-65', score: 1, maxScore: 5, category: 'low', factors: [{ name: 'Urea', value: 18, weight: 1, contribution: 0 }, { name: 'RR', value: 24, weight: 1, contribution: 0 }, { name: 'BP', value: '132/78', weight: 1, contribution: 0 }, { name: 'Age', value: 54, weight: 1, contribution: 0 }, { name: 'Confusion', value: 'no', weight: 1, contribution: 0 }], calculatedAt: hoursAgo(2), reference: 'BTS CURB-65' }],
     aiInsights: [{
       id: 'ai4', type: 'diagnosis', title: 'COPD exacerbation — low pneumonia probability',
@@ -376,7 +376,7 @@ export const MOCK_PATIENTS: Patient[] = [
       ],
     }],
     ecgStudies: [],
-    notes: [],
+    clinicalNotes: [],
     riskScores: [],
     aiInsights: [{
       id: 'ai5', type: 'monitoring', title: 'Neurodegenerative trajectory — ADNI-aligned',
@@ -423,7 +423,7 @@ export const MOCK_PATIENTS: Patient[] = [
       ],
     }],
     ecgStudies: [],
-    notes: [],
+    clinicalNotes: [],
     riskScores: [],
     aiInsights: [{
       id: 'ai6', type: 'diagnosis', title: 'AutoPET segmentation: dominant RUL lesion + hilar node',
@@ -480,7 +480,7 @@ export const MOCK_PATIENTS: Patient[] = [
       tAxis: 45,
       acquiredAt: hoursAgo(2),
     }],
-    notes: [],
+    clinicalNotes: [],
     riskScores: [],
     aiInsights: [{
       id: 'ai7', type: 'diagnosis', title: 'EchoNet LVEF 32% — new HFrEF phenotype',

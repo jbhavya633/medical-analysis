@@ -3,18 +3,15 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   AlertTriangle, Heart, Pill, Scan, FileText, AlertCircle,
   Calendar, Droplets, Brain,
-  Zap, Stethoscope, Download, Search, Share2, ChevronLeft
+  Zap, Download, Share2, ChevronLeft
 } from 'lucide-react'
-import { MOCK_PATIENTS } from '../data/mockData'
 import { usePatient } from '../contexts/PatientContext'
 import { Card, CardHeader, CardTitle, CardDescription } from '../components/ui/Card'
 import { Badge, PriorityBadge, InterpretationBadge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { Modal } from '../components/ui/Modal'
-import { Tabs, TabList, TabTrigger, TabContent } from '../components/ui/Tabs'
 import { Table, Column } from '../components/ui/Table'
 import { formatRelativeTime, calculateAge, formatDate, cn } from '../utils/helpers'
-import { Patient, LabResult, ImagingStudy, ClinicalNote, AIInsight } from '../types'
+import { Patient, LabResult, ImagingStudy } from '../types'
 import { generateECGWaveform, ECG_LEADS } from '../data/mockData'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -22,7 +19,7 @@ export function PatientDetail() {
   const params = useParams<{ id: string }>()
   const patientId = params.id
   const navigate = useNavigate()
-  const { refreshPatient, getPatient, patients } = usePatient()
+  const { refreshPatient, getPatient } = usePatient()
   const [patient, setPatient] = useState<Patient | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -37,13 +34,13 @@ export function PatientDetail() {
   if (!patient) return <div className="p-6 text-center">Loading patient…</div>
 
   const timeline = [
-    ...patient.labResults.map(l => ({ ...l, type: 'lab' as const, time: l.collectedAt })),
+    ...patient.labResults.map(l => ({ ...l, type: 'lab' as const, time: l.collectedAt ?? '' })),
     ...patient.imagingStudies.map(s => ({ ...s, type: 'imaging' as const, time: s.studyDate })),
     ...patient.ecgStudies.map(e => ({ ...e, type: 'ecg' as const, time: e.acquiredAt })),
-    ...patient.clinicalNotes.map(n => ({ ...n, type: 'note' as const, time: n.createdAt })),
+    ...patient.clinicalNotes.map(n => ({ ...n, type: 'note' as const, time: n.authoredAt ?? '' })),
     ...patient.medications.map(m => ({ ...m, type: 'med' as const, time: m.startDate })),
     ...patient.conditions.map(c => ({ ...c, type: 'condition' as const, time: c.onsetDate })),
-  ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+  ].sort((a, b) => new Date(b.time ?? 0).getTime() - new Date(a.time ?? 0).getTime())
 
   return (
     <div className="p-6 space-y-6 page-transition">
@@ -200,7 +197,7 @@ export function PatientDetail() {
             </CardHeader>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={patient.vitals.slice(-24).map(v => ({ t: formatDate(v.timestamp), hr: v.heartRate, spo2: v.spo2, sbp: v.systolicBP }))}>
+                <AreaChart data={patient.vitals.slice(-24).map(v => ({ t: formatDate(v.timestamp), hr: v.heartRate, spo2: v.oxygenSaturation ?? v.spo2, sbp: v.bloodPressureSystolic ?? v.systolicBP }))}>
                   <defs>
                     <linearGradient id="hr" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} /><stop offset="100%" stopColor="#ef4444" stopOpacity={0} /></linearGradient>
                     <linearGradient id="spo2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#14b8a6" stopOpacity={0.3} /><stop offset="100%" stopColor="#14b8a6" stopOpacity={0} /></linearGradient>
@@ -273,8 +270,8 @@ function getEventColor(type: string) {
 }
 
 function renderEvent(ev: any) {
-  const icon = { lab: Droplets, imaging: Scan, ecg: Zap, note: FileText, med: Pill, condition: AlertTriangle }[ev.type] || FileText
-  const Icon = icon
+  const iconMap: Record<string, any> = { lab: Droplets, imaging: Scan, ecg: Zap, note: FileText, med: Pill, condition: AlertTriangle }
+  const Icon = iconMap[ev.type] || FileText
 
   switch (ev.type) {
     case 'lab':
@@ -383,7 +380,7 @@ function ImagingTable({ patient }: { patient: Patient }) {
     { key: 'modality', header: 'Modality', accessor: s => s.modality, render: (_, s) => <Badge variant="info">{s.modality}</Badge> },
     { key: 'bodyPart', header: 'Body part', accessor: s => s.bodyPart },
     { key: 'description', header: 'Description', accessor: s => s.description },
-    { key: 'status', header: 'Status', accessor: s => s.status, render: v => <Badge size="sm" variant={v === 'final' ? 'success' : 'warning'}>{String(v)}</Badge> },
+    { key: 'status', header: 'Status', accessor: s => s.status, render: v => <Badge size="sm" variant={v === 'completed' ? 'success' : 'warning'}>{String(v)}</Badge> },
     { key: 'studyDate', header: 'Date', accessor: s => s.studyDate, sortable: true, render: v => formatDate(String(v)) },
     { key: 'aiFindings', header: 'AI findings', accessor: s => s.aiFindings?.length || 0, render: v => Number(v) > 0 ? <Badge variant="clinical" size="sm">{String(v)} findings</Badge> : <span className="text-neutral-400">—</span> },
   ]
@@ -399,7 +396,7 @@ function NotesTable({ patient }: { patient: Patient }) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
                 <Badge variant="info" size="sm">{note.type}</Badge>
-                <span className="text-xs text-neutral-500">{note.author} · {formatRelativeTime(note.createdAt)}</span>
+                <span className="text-xs text-neutral-500">{note.author.name} · {formatRelativeTime(note.authoredAt)}</span>
               </div>
               <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">{note.content}</div>
             </div>
@@ -476,7 +473,7 @@ function ECGViewer({ patient }: { patient: Patient }) {
   }
 
   const study = patient.ecgStudies[0]
-  const waveform = generateECGWaveform(lead, seconds, study.heartRate, study.rhythm === 'afib')
+  const waveform = generateECGWaveform(lead, seconds, 500, study.rhythm === 'afib').map(v => ({ v }))
 
   return (
     <Card className="p-5">

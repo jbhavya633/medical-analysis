@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { format, formatDistanceToNow, parseISO, isValid, differenceInYears, differenceInDays, differenceInHours, differenceInMinutes } from 'date-fns'
-import { Patient, LabResult, VitalSigns, RiskScore, AIInsight } from '../types'
+import { format, formatDistanceToNow, parseISO, isValid, differenceInYears, differenceInDays } from 'date-fns'
+import { LabResult, VitalSigns, RiskScore, AIInsight } from '../types'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -279,7 +279,7 @@ export function groupBy<T>(array: T[], key: keyof T | ((item: T) => string)): Re
   }, {} as Record<string, T[]>)
 }
 
-export function sortBy<T>(array: T[], key: keyof T | ((item: T) => unknown), order: 'asc' | 'desc' = 'asc'): T[] {
+export function sortBy<T>(array: T[], key: keyof T | ((item: T) => string | number), order: 'asc' | 'desc' = 'asc'): T[] {
   return [...array].sort((a, b) => {
     const aVal = typeof key === 'function' ? key(a) : a[key]
     const bVal = typeof key === 'function' ? key(b) : b[key]

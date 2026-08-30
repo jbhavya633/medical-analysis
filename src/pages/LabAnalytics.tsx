@@ -79,11 +79,15 @@ export function LabAnalytics() {
     )},
     { key: 'ref', header: 'Reference', accessor: l => `${l.referenceRange.low}–${l.referenceRange.high} ${l.referenceRange.unit}` },
     { key: 'interpretation', header: 'Flag', accessor: l => l.interpretation, render: (_, l) => <InterpretationBadge interpretation={l.interpretation} /> },
-    { key: 'delta', header: 'Δ', accessor: l => l.delta, render: (v: number | undefined, l) => l.delta !== undefined ? (
-      <span className={cn('font-mono font-medium', v > 0 ? 'text-critical-600' : v < 0 ? 'text-medical-600' : 'text-neutral-500')}>
-        {v > 0 ? '+' : ''}{v.toFixed(1)}
-      </span>
-    ) : <span className="text-neutral-400">—</span> },
+    { key: 'delta', header: 'Δ', accessor: l => l.delta, render: (_, l) => {
+      const delta = l.delta
+      if (delta === undefined) return <span className="text-neutral-400">—</span>
+      return (
+        <span className={cn('font-mono font-medium', delta > 0 ? 'text-critical-600' : delta < 0 ? 'text-medical-600' : 'text-neutral-500')}>
+          {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+        </span>
+      )
+    } },
     { key: 'collectedAt', header: 'Collected', accessor: l => l.collectedAt, sortable: true, render: v => formatRelativeTime(String(v)) },
     { key: 'patient', header: 'Patient', accessor: l => l.patient, render: (_, l) => l.patient ? (
       <span className="text-sm">{l.patient.lastName}, {l.patient.firstName} · {l.patient.mrn}</span>
