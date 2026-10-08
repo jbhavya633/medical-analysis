@@ -231,3 +231,247 @@ https://www.kaggle.com/code/dev523/quantum-kernel-machine-learning, https://www.
 - README (online, no code read): 10. A1-A7, B5, B6, B8.
 - Docs: 1. PennyLane via Context7.
 - BLOCKED: 4. D1-D3 (Kaggle) and T4-2 (Qiskit Aer, not installed; MCP disconnected). nature.com direct links redirected to a login page, so C9, C10 and C11 were read via PMC instead.
+
+---
+
+# Addendum study (docs/LEARN_FROM_ADDENDUM.md, master prompt v2 P1), 2026-10-08
+
+Same five-part template. "Our setting" = 6 qubits, <= 200 training rows per fold, 12+ small public tabular medical datasets, CPU simulation only. All [verify] identifiers in the addendum resolved (H3, H5, H7-H12 on arXiv; H14, H15 on PubMed) and are now marked verified.
+
+## G. "Quantum beats classical" claims
+
+### G1 arXiv 2604.24597v1, QSVM on medical foundation-model embeddings - FULL (to ~86%)
+https://arxiv.org/html/2604.24597v1
+- (a) Frozen chest-X-ray embeddings are PCA-reduced to q dimensions and fed to a fidelity QSVM (one RY per qubit, ring CNOT, 1 rep, trace-normalised kernel). The analysis compares kernel effective ranks.
+- (b) Untuned QSVM beats an untuned linear SVM on minority-class F1 in 18/18 configurations, because the linear kernel's effective rank is about q and it collapses to the majority class (Tables 2, 5). Against an RBF SVM with C tuned, the mean gain is +0.068 F1 (Table 4). A rank-matched RBF closes much of the gap: 0.304 vs 0.343 at q = 11 (Table 10). The DT9 stratum was chosen post hoc (Sec. III.1, VI.6). The task is insurance type, not disease.
+- (c) **Weak to moderate.** Primary win is against an untuned baseline. Stratum chosen after seeing results. Single site. Simulation only. Text and tables disagree (Sec. VI.6 vs Table 10).
+- (d) **Uncertain.** The effective-rank lens transfers directly: our sandbox and E3 showed the untuned ZZ kernel is near-diagonal and the tuned bandwidth changes its rank. The "win" itself does not transfer (we tune every baseline).
+- (e) H-G1 (E12): the tuned-bandwidth QSVM does not beat an RBF SVM whose gamma is chosen so its kernel effective rank matches the QSVM's, on the development set. Cost: < 2 min (kernels only).
+
+### G2 arXiv 2511.10831v1, quantum kernels across diverse data - FULL
+https://arxiv.org/html/2511.10831v1
+- (a) Amplitude and coherent-state quantum kernels with a scaled RZ(s·φ·x) layer, trained by kernel-target alignment (Adam, 500 steps, batches of 4).
+- (b) Quantum kernels top Table 1 on 6 of 8 datasets (e.g., SEED 0.878 vs 0.684). But the quantum search stopped once it matched the classical baseline while classical kernels got a full grid (Sec. IV.0.3, Sec. V). Single split, one seed, no variance. MinMax vs Standard scaling mattered for quantum only (Sec. IV.0.1).
+- (c) **Weak.** Asymmetric tuning, no variance, a text/table mismatch (30% vs 19 pp).
+- (d) **Likely** for the mechanism (scale parameter on the encoding angle; this is our bandwidth s). **Unlikely** for the size of the win.
+- (e) H-G2 (E13): choosing s by maximal centred KTA on the training fold gives the same pooled AUC as choosing s by inner-CV AUC (|Δ| < 0.01), at a fraction of the cost. Cost: < 2 min.
+
+### G3 arXiv 2508.19437, data-efficient learning with quantum kernels - FULL
+https://arxiv.org/html/2508.19437
+- (a) Compares sample efficiency via cumulative target-alignment spectra and learning curves at small N (50 repeats), on real clinical features (WDBC, heart failure, BMT) with engineered labels.
+- (b) The quantum kernel learns engineered targets with fewer samples (Fig. 3). The authors do not test natural labels and call the results "not conclusive on their own" (Sec. V).
+- (c) **Weak for natural labels** (by construction).
+- (d) **Unlikely** that a low-data advantage appears with natural labels. The learning-curve-with-repeats protocol transfers.
+- (e) H-G3 (E17): on natural labels, quantum learning curves at N = 10, 20, 50, 100, 200 lie on or below parameter-matched classical controls. Cost: ~30 min on 4 dev datasets.
+
+### G4 arXiv 2602.14641, quantum reservoir on 108 patients - FULL
+https://arxiv.org/html/2602.14641
+- (a) Top-SHAP feature subsets encoded into a neutral-atom reservoir, with nested 5 x (inner 10-fold) random search for six classical readouts.
+- (b) Classical models peak at 5-7 SHAP features, above all 56 features (Sec. III.1.1, Fig. 1). Noiseless reservoir features do not beat classical (Sec. III.1.2). Hardware runs used SHAP rankings aggregated across splits including test data (leakage acknowledged, Sec. II.6).
+- (c) **Moderate** for the feature-subset finding (nested, per-split SHAP for emulated runs). **Weak** for hardware results (leakage).
+- (d) **Likely.** Our qubit budget forces k = 6; 5-7 is exactly our regime. Ranking must stay inside training folds.
+- (e) H-G4 (E14): SHAP-ranked top-k (k in {5, 6, 7}) selection fitted inside training folds matches or beats mutual-information selection at k = 6 for LogReg and the VQC on the development set. Cost: ~25 min.
+
+### G5 Sci Rep 2026, MedMNIST on IBM hardware - FULL via PMC
+https://pmc.ncbi.nlm.nih.gov/articles/PMC12992601/ (DOI 10.1038/s41598-026-35605-3; nature.com redirected to login)
+- (a) Hardware-aware circuit search, then circuit selection by a Clifford-replica noise-resilience score (discard below 0.7), then DD + twirling + M3 mitigation on IBM Cleveland, with 60-120 parameters.
+- (b) Mitigation raised OCTMNIST AUC from 0.545 to 0.622 (Table 4). QML trails the best classical model on every dataset by 2.6-54 pp (Table 6). No cross-validation; repeated only on DermaMNIST (Results). The authors concede the circuits are classically simulable (Discussion).
+- (c) **Moderate** for the noise-aware selection method. **Weak** for performance claims.
+- (d) **Uncertain.** No hardware for us. Ranking circuits by simulated degradation under the same noise model is a cheap analogue.
+- (e) H-G5 (E18): under p2 = 0.01 two-qubit noise, circuits with fewer CNOTs (no-ring) degrade less in Brier than the ring circuit, without a larger noiseless AUC loss. Cost: ~10 min.
+
+### G6 arXiv 2408.12739, QCNNs are effectively classically simulable - ABSTRACT
+https://arxiv.org/abs/2408.12739 (PRX Quantum 7, 020304)
+- (a) Randomly initialised QCNNs only use low-body information, so on "locally-easy" datasets a Pauli-shadow classical algorithm simulates them (up to 1024 qubits).
+- (b) Numerical evidence on phases-of-matter tasks (abstract).
+- (c) **Moderate** (peer-reviewed, but heuristic, average-case).
+- (d) **Likely** in spirit. Our 6-qubit circuits are trivially simulable. Any claim must be about the model class, never about a computational speed-up.
+- (e) No experiment. It sets a claim boundary (INFERENCES "claims not allowed").
+
+### G7 arXiv 2211.16551, evidence against advantage with fidelity kernels - ABSTRACT
+https://arxiv.org/abs/2211.16551 (Phys. Rev. A 107, 062417)
+- (a) Shows that the bandwidth tuning which restores generalisation in fidelity quantum kernels drives them towards classical kernels. Spectra flatten exponentially with qubit count.
+- (b) Extensive numerics on several feature maps, synthetic and real data (abstract).
+- (c) **Moderate to strong** (peer-reviewed, consistent with H6 and C12).
+- (d) **Likely.** Our E3 result (tuned s = 0.1-0.35 lifts AUC to LogReg parity) is exactly this mechanism.
+- (e) H-G7 (E12/E19): on datasets where the tuned QSVM gains most, the chosen bandwidth is smallest and the kernel is closest to the rank-matched RBF kernel (correlation across datasets). Cost: from E12.
+
+### G8 arXiv 2509.16410, data complexity threshold Part I - FULL (to ~94%)
+https://arxiv.org/html/2509.16410v1
+- (a) Review of data-complexity metrics: covariance effective dimension (Σλ)²/Σλ² (Sec. 2.1.1), cumulant interaction order (2.1.2), compression ratio (2.1.3), kernel effective dimension Tr(K(K+λI)^-1) (2.1.4), persistent homology (2.1.5).
+- (b) Conceptual. No thresholds are numerically specified or validated; validation is deferred to Part II.
+- (c) **Weak** as evidence, **useful** as a menu of diagnostics.
+- (d) **Likely**, for the cheap ones (effective dimension, kernel effective dimension, class balance, n, d, compression ratio).
+- (e) H-G8 (E19): across 12+ datasets the quantum-minus-best-classical AUC gap does not correlate significantly (Spearman, |ρ| CI excludes 0) with any single diagnostic. Cost: minutes after P4.
+
+### G9 arXiv 2609.24666v1, few-shot generalisation of a QCNN - FULL (to ~91%)
+https://arxiv.org/html/2609.24666v1
+- (a) Learning curves at N = 2..80 with 10 repeated draws. A parameter-matched classical CNN as control, plus unconstrained classical baselines and transpiled-depth scaling.
+- (b) The QCNN beats the parameter-matched CNN (which stays at chance), but RBF-SVM (> 0.98 by N = 5) and LogReg (> 0.99 by N = 10) beat the QCNN's ~0.95 plateau (Sec. IV.3, Fig. 10). The authors disclaim advantage.
+- (c) **Moderate** (repeats, honest baselines; digits are easy).
+- (d) **Likely.** Parameter-matched controls can make a quantum model look good. Reporting must include unconstrained baselines.
+- (e) Same as H-G3 (E17), with both a parameter-matched MLP and the tuned LogReg on the plot.
+
+### G10 arXiv 2511.20922v3, readout-side bypass (residual hybrid) - ABSTRACT
+https://arxiv.org/abs/2511.20922
+- (a) Concatenate raw inputs with quantum features before the classical classifier.
+- (b) Claims up to +55% over quantum baselines (abstract), with no baseline/dataset context. Parameter counts not matched.
+- (c) **Weak.**
+- (d) **Likely** to "help" for a trivial reason: the raw-input path is a classical model. The fair control is the same head with a classical feature block of equal size.
+- (e) H-G10 (E15): a residual head on [x, q(x)] does not beat the same head on [x, tanh(Wx)] with equal parameters. Cost: ~25 min on dev datasets.
+
+### G11 arXiv 2512.20654v1, Q-RUN (classical re-uploading network) - FULL (to ~84%)
+https://arxiv.org/html/2512.20654v1
+- (a) A classical network that mimics re-uploading: per-feature sin/cos expansions plus a shared element-wise MLP (Sec. 4.2).
+- (b) Mixed wins across tasks (Tables 2-7). The headline "orders of magnitude" is supported only as 5-449x on one task (Table 3). The universality claim (Claim 2) is proven for a different formulation than the tested network.
+- (c) **Weak to moderate.**
+- (d) **Likely** as a control design: a classical "twin" with the same input frequencies tests whether the quantum circuit adds anything beyond a trigonometric feature map.
+- (e) H-G11 (E16): a classical trig twin of the re-uploading VQC (scaled sin/cos features per layer, small head, ~38 parameters) matches the re-uploading VQC's pooled AUC on the dev set (|Δ| CI includes 0). Cost: ~15 min.
+
+### G12 arXiv 2601.03375, projected quantum kernels on small data - ABSTRACT
+https://arxiv.org/abs/2601.03375
+- (a) Projected kernel features (reduced density matrices) feed a CNN.
+- (b) Claims CIFAR-10 at 90% vs classical CNN 12% with 1,000 samples (abstract). A CNN at 12% on CIFAR-10 is barely above chance, and the abstract's dates are inconsistent.
+- (c) **Very weak.** Not used.
+- (d) **Unlikely.**
+- (e) None.
+
+### G13 PostQuantum "QML reality" review - FULL
+https://postquantum.com/quantum-ai/quantum-machine-learning-reality/
+- (a) Five filters for any QML claim: primary evidence, hardware vs simulator, tuned classical baseline, data-loading/error-correction cost, natural vs constructed data.
+- (b) Secondary review. Concludes that no fair-fight advantage on ordinary classical data is broadly accepted.
+- (c) **Moderate** as a checklist.
+- (d) **Likely.** We adopt the five filters as the "Findings and limits" page structure (D10).
+- (e) None (process).
+
+### G14 IBM Research blog on quantum kernels - FULL
+https://research.ibm.com/blog/quantum-kernels
+- (a) The rigorous kernel speed-up (Liu, Arunachalam, Temme, Nature Physics 2021) holds for discrete-log-structured classification problems.
+- (b) Proven under hardness assumptions. The authors note that many real problems will not benefit.
+- (c) **Strong** for its narrow scope.
+- (d) **Unlikely** to apply to tabular medical data.
+- (e) None (claim boundary).
+
+## H. New sources
+
+### H1 Demšar 2006, JMLR 7:1-30 - ABSTRACT
+https://www.jmlr.org/papers/v7/demsar06a.html
+- (a) Compares classifiers over many datasets: Wilcoxon signed-rank for two classifiers; Friedman then post-hoc tests for more; critical-difference diagrams.
+- (b) Methodological recommendation (abstract); widely adopted.
+- (c) **Strong.**
+- (d) **Likely.** Exactly D5.
+- (e) Process: Friedman p and Nemenyi CD for 12+ datasets x ~13 models.
+
+### H2 Cawley & Talbot 2010, JMLR 11:2079-2107 - ABSTRACT
+https://www.jmlr.org/papers/v11/cawley10a.html
+- (a) Variance of the model-selection criterion lets selection over-fit, so unbiased-but-noisy criteria still bias performance estimates.
+- (b) Over-fitting in selection can be comparable in size to differences between algorithms (abstract).
+- (c) **Strong.**
+- (d) **Likely.** Our "optimism" column measures it.
+- (e) Process: leakage audit that no outer fold touches tuning, plus optimism per model.
+
+### H3 Varoquaux 2017, arXiv 1706.07581 (verified) - ABSTRACT
+https://arxiv.org/abs/1706.07581
+- (a) Fold-to-fold standard error understates CV uncertainty; small samples give large error bars.
+- (b) About ±10% at n ≈ 100 (abstract).
+- (c) **Strong.**
+- (d) **Likely.** Our datasets have 150-800 rows: report intervals, repeated CV, corrected resampled t-tests.
+- (e) Process.
+
+### H4 Grinsztajn, Oyallon, Varoquaux 2022, arXiv 2207.08815 - ABSTRACT
+https://arxiv.org/abs/2207.08815
+- (a) A 45-dataset tabular benchmark with hyperparameter-search budget curves (20,000 compute-hours).
+- (b) Tree-based models remain state of the art on medium-sized tabular data (abstract).
+- (c) **Strong.**
+- (d) **Likely.** Justifies adding HistGradientBoosting as a strong baseline (D4).
+- (e) Process: HGB in every comparison.
+
+### H5 Bischl et al., OpenML Benchmarking Suites, arXiv 1708.03731 (verified) - ABSTRACT
+https://arxiv.org/abs/1708.03731
+- (a) Curated, documented task suites with metadata (e.g., OpenML-CC18).
+- (b) Design guidance (abstract).
+- (c) **Strong** as practice.
+- (d) **Likely.** The registry gets checksums, licences, provenance and target rules.
+- (e) Process (D2).
+
+### H6 Thanasilp, Wang, Cerezo, Holmes 2022, arXiv 2208.11060 - ABSTRACT
+https://arxiv.org/abs/2208.11060
+- (a) Quantum kernel values concentrate exponentially with qubit count, from expressive embeddings, global measurements, entanglement and noise; trained (alignment) embeddings are also vulnerable.
+- (b) Analytical bounds plus numerics (abstract).
+- (c) **Strong** (theory).
+- (d) **Likely.** At 6 qubits concentration is mild, but the untuned ZZ map already behaves like the "too concentrated" regime. Track the off-diagonal mean and effective rank per dataset.
+- (e) Feeds E19 diagnostics.
+
+### H7 Hubregtsen et al. 2021, arXiv 2105.02276 (verified; Phys. Rev. A 106, 042431) - ABSTRACT
+https://arxiv.org/abs/2105.02276
+- (a) Train embedding kernels by kernel-target alignment, with noise mitigation and finite-shot bounds.
+- (b) Simulations plus hardware tests (abstract).
+- (c) **Moderate to strong.**
+- (d) **Likely**, in time-boxed form (E13).
+- (e) Same as H-G2.
+
+### H8 Kübler, Buchholz, Schölkopf 2021, arXiv 2106.03747 (verified; NeurIPS 2021) - ABSTRACT
+https://arxiv.org/abs/2106.03747
+- (a) Spectral analysis of quantum kernels' inductive bias.
+- (b) Advantage needs a low-dimensional RKHS that contains classically hard functions; this is more plausible for quantum-generated data (abstract).
+- (c) **Strong** (theory).
+- (d) **Likely** as interpretation: our tuned bandwidth narrows the RKHS, but nothing suggests our labels are classically hard.
+- (e) Interpretation of E3/E12 only.
+
+### H9 Schuld, Sweke, Meyer 2021, arXiv 2008.08605 (verified; Phys. Rev. A 103, 032430) - ABSTRACT
+https://arxiv.org/abs/2008.08605
+- (a) Variational quantum models are partial Fourier series in the data. The encoding gates set the accessible frequencies; repeating encodings enriches the spectrum.
+- (b) Theory (abstract).
+- (c) **Strong.**
+- (d) **Likely.** It explains why trainable input scaling (changes frequencies) helped the heart VQC more than depth.
+- (e) Interpretation of E6 plus the trig twin (E16).
+
+### H10 Schreiber, Eisert, Meyer 2023, arXiv 2206.11740 (verified; PRL 131, 100803) - ABSTRACT
+https://arxiv.org/abs/2206.11740
+- (a) Efficiently obtained classical surrogates reproduce trained re-uploading models.
+- (b) In their experiments, quantum models showed no advantage in performance or trainability (abstract).
+- (c) **Strong.**
+- (d) **Likely.** A surrogate-fidelity check: fit a classical trig regression to the trained VQC's outputs on training rows; report R² on validation rows.
+- (e) H-H10 (E16b): surrogate R² > 0.9 on the dev set. Cost: minutes.
+
+### H11 Pérez-Salinas et al. 2020, arXiv 1907.02085 (verified; Quantum 4, 226) - ABSTRACT
+https://arxiv.org/abs/1907.02085
+- (a) Data re-uploading makes even a single-qubit classifier universal.
+- (b) Constructive argument plus examples (abstract).
+- (c) **Strong** (origin paper).
+- (d) **Likely.** Our vqc_reupload_scale implements the layer-wise version; E6 compares it against a parameter-matched 3-layer control.
+- (e) Covered by E6.
+
+### H12 Havlíček et al. 2019, arXiv 1804.11326 (verified; Nature 567, 209-212) - ABSTRACT
+https://arxiv.org/abs/1804.11326
+- (a) Origin of the quantum kernel estimator and the ZZ-type feature map.
+- (b) Hardware demonstration on engineered data (abstract).
+- (c) **Strong** as provenance.
+- (d) Our map differs: RY(π/2) replaces the Hadamard (hardware-native gate set, DECISIONS.md 22:07), pair phase (π-x_i)(π-x_j) on a linear chain, a new bandwidth s. The map definition itself was not visible on the abstract page (UNVERIFIED detail).
+- (e) Documentation item for the technical report.
+
+### H13 PennyLane demos: kernels module and kernel-based training - FULL
+https://pennylane.ai/demos/tutorial_kernels_module, https://pennylane.ai/demos/tutorial_kernel_based_training
+- (a) Embedding kernel = overlap circuit; alignment training with a differentiable, class-balanced KTA on 4-point batches for 500 steps. Kernel training costs ~M² circuit evaluations versus variational training ~params x steps x batch.
+- (b) Tutorial example only (alignment 0.07 to 0.27).
+- (c) **Moderate** (reference implementation, not evidence).
+- (d) **Likely** for cost reasoning: our 200-row cap keeps kernels cheap (statevector, one broadcast per matrix).
+- (e) Informs E13's time box.
+
+### H14 TRIPOD+AI (Collins et al., BMJ 2024;385:e078378) - verified via PubMed (see T3-2)
+### H15 Van Calster et al. 2019, BMC Medicine 17:230 - verified via PubMed (see T3-3)
+Both resolve. They require calibration slope/intercept, decision curves and an item-mapped reporting checklist (D7, D13).
+
+## Clinical need for early detection (for the deck and technical report; according to PubMed)
+1. Bray F et al. Global cancer statistics 2022 (GLOBOCAN). CA Cancer J Clin 2024;74:229-263. https://doi.org/10.3322/caac.21834. About 20 million new cancer cases and 9.7 million deaths in 2022; female breast cancer is 11.6% of new cases.
+2. Roth GA et al. Global Burden of Cardiovascular Diseases and Risk Factors, 1990-2019. J Am Coll Cardiol 2020;76:2982-3021. https://doi.org/10.1016/j.jacc.2020.11.010. CVD deaths rose to 18.6 million in 2019; the leading cause of disease burden.
+3. Sun H et al. IDF Diabetes Atlas: 2021 estimates and 2045 projections. Diabetes Res Clin Pract 2022;183:109119. https://doi.org/10.1016/j.diabres.2021.109119. 536.6 million adults (10.5%) with diabetes in 2021, projected 783.2 million by 2045.
+4. GBD Chronic Kidney Disease Collaboration. Global burden of CKD, 1990-2017. Lancet 2020;395:709-733. https://doi.org/10.1016/S0140-6736(20)30045-3. 697.5 million CKD cases (9.1% prevalence) and 1.2 million deaths in 2017; CKD is largely preventable and treatable.
+5. Siegel RL et al. Cancer statistics, 2022. CA Cancer J Clin 2022;72:7-33. https://doi.org/10.3322/caac.21708. Calls for investment in improved early detection; links stage at diagnosis to survival trends.
+6. Coleman C. Early Detection and Screening for Breast Cancer. Semin Oncol Nurs 2017;33:141-155. https://doi.org/10.1016/j.soncn.2017.02.009. Serial screening detects early-stage disease and reduces mortality.
+
+## Addendum reading tally
+- FULL or near-full: G1, G2, G3, G4, G5 (via PMC), G8, G9, G11, G13, G14, H13 = 11.
+- ABSTRACT only: G6, G7, G10, G12, H1-H12 = 16.
+- Verified via PubMed (previously read): H14, H15 = 2.
+- BLOCKED: none. The nature.com link for G5 redirected to a login; read via PMC.

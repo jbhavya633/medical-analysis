@@ -198,3 +198,26 @@ Score = (expected gain 1-5 × confidence 0-1) / cost in minutes. Costs come from
 
 ## What is deliberately not in this round
 Full kernel-target-alignment training (≈2,000× cost, C12), QuantumNAS search (B7), TorchQuantum (B6; Python range), stacked kernel ensembles (R2), QCCNN imaging layers (C11), and any real-hardware run (needs an IBM account and approval).
+
+---
+
+## Extension for master prompt v2 (P1): experiments E12-E19
+
+Same shared protocol, upgraded for the multi-dataset round (docs/PREREGISTRATION.md governs where it conflicts):
+- **Repeats.** Repeated stratified 5-fold, with the repeat count fixed for every model in PREREGISTRATION.
+- **Development and confirmation.** Design decisions are made on the 4 development datasets only (Cleveland, WDBC, Pima, ILPD); confirmation datasets are run once, unchanged.
+- **Tests.** Per dataset: corrected resampled t-test (Nadeau-Bengio) with Holm. Across datasets: Friedman, then Wilcoxon-Holm and a CD diagram.
+- **Budget.** At most two design iterations per experiment.
+
+| ID | Experiment | Source | Hypothesis (direction) | Design | Metric / test | Cost | Stopping rule |
+|---|---|---|---|---|---|---|---|
+| E12 | Kernel effective-rank control | G1, G7, H6 | The tuned QSVM does **not** beat an RBF SVM whose gamma matches the QSVM kernel's effective rank | Per outer fold: compute the tuned QSVM kernel's effective rank on training rows; binary-search RBF gamma to match it; same C grid as qsvm_c | Pooled AUC difference, corrected t per dataset; Wilcoxon across dev datasets | < 5 min | If rank-matched RBF >= QSVM on all dev datasets, report "explained by kernel rank" and stop |
+| E13 | Bandwidth by KTA vs by inner CV | G2, H7, H13 | Choosing s by maximal centred KTA on training rows gives AUC within 0.01 of inner-CV selection | Same s grid; selection criterion differs; also time-boxed (<= 60 s/fold) gradient KTA on a 150-row subsample | AUC difference + wall time | < 10 min | Keep KTA selection only if within 0.01 and > 3x cheaper |
+| E14 | SHAP top-k feature subsets (k = 5, 6, 7) | G4, C12 | SHAP-ranked selection (inside training folds) >= MI selection at k = 6 for LogReg and the VQC | SHAP of a tuned LogReg on inner folds ranks raw features; qubits = k | AUC, corrected t | ~30 min | Keep only if it improves the dev set mean AUC by >= 0.005 for the VQC without hurting LogReg |
+| E15 | Residual head [x, q(x)] vs equal classical head [x, tanh(Wx)] | G10 | The residual quantum head does **not** beat the equal classical head | Same head size; parameter counts reported; tuned with the VQC grid | AUC, corrected t | ~25 min | Single run on dev; confirm once |
+| E16 | Classical trig twin of the re-uploading VQC + surrogate fidelity | G11, H9, H10 | The twin matches the re-uploading VQC (CI of difference includes 0); a trig surrogate fitted to the trained VQC reaches R² > 0.9 on validation rows | Twin: scaled sin/cos features per layer, small head, ~38 params; surrogate: ridge on trig features of degree <= L per feature plus pairwise products | AUC; surrogate R² | ~20 min | Report either way |
+| E17 | Learning curves N = 10, 20, 50, 100, 200 | G3, G9 | Quantum curves lie on or below the tuned LogReg and the parameter-matched MLP at every N | 10 repeated stratified draws per N; fixed validation split per repeat; dev datasets | Mean AUC +- CI per N | ~40 min | No early stop (descriptive) |
+| E18 | Noise-aware circuit choice | G5 | With p2 = 0.01 two-qubit noise, the no-CNOT circuit degrades less (Brier) than the ring circuit | Trained weights re-run on default.mixed; 3-dataset subset | Δ Brier, Δ AUC vs exact with bootstrap CI | ~15 min | Descriptive; never presented as robustness |
+| E19 | Data-complexity diagnostics vs quantum gap | G8, H6, H8 | No single diagnostic correlates significantly with the quantum-minus-best-classical AUC gap | Per dataset: n, d, class balance, covariance effective dimension, kernel effective dimension and off-diagonal mean (tuned QSVM kernel), compression ratio | Spearman ρ with bootstrap CI across 12+ datasets | minutes | Descriptive |
+
+The D4 model list for the multi-dataset round: LogReg, RBF-SVM, RandomForest, MLP, **HistGradientBoosting**, tuned-bandwidth QSVM, VQC and the best development-set VQC variant, hybrid QNN, **residual head (E15)**, and controls: **parameter-matched MLP**, **classical twin (E16)**, VQC without the CNOT ring, hybrid with a classical layer.

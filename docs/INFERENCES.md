@@ -112,3 +112,36 @@ Yes. `make_preprocessor(n_qubits, method, seed).fit(X_train, y_train)` runs on t
 1. **Selection on the outer folds.** Picking a variant (such as s = 0.1, or "re-uploading") because it scored best on our 5-fold table, then reporting that table. This is the Varma & Simon bias (T3-1). The sandbox findings in this document must be re-tested under nested CV, not adopted.
 2. **Unequal budgets or confounded capacity.** Tuning only quantum models, or comparing a 38-parameter VQC against a 26-parameter base without a parameter-matched control, or training variants for different epochs (C13 Sec. IV). Also changing more than one thing at once (s and C in H1).
 3. **Evaluation-data leakage through thresholds and preprocessing.** Choosing the decision threshold, Platt calibration or feature subset on validation rows (A3 admits this), or fitting any preprocessing outside the training fold (R2's global PCA). Reporting per-fold ECE at about 61 rows as if it were stable, or quoting a single-seed sandbox number, also counts.
+
+---
+
+## 8. Addendum inferences (master prompt v2 P1; sources G1-G14, H1-H15 in docs/LEARNING_LOG.md)
+
+### 8.1 New agreements
+| # | Agreement | Sources | Confidence |
+|---|---|---|---|
+| A9 | Published "quantum wins" on tabular or embedded medical data depend on **untuned or asymmetrically tuned** classical baselines, post-hoc data choices or engineered labels. Against tuned or rank-matched baselines the gap shrinks to parity. | G1 (untuned linear; rank-matched RBF closes most of the gap, Table 10), G2 (quantum search stopped at baseline), G3 (engineered labels), G9 (LogReg/RBF beat the QCNN), C12, C13 | HIGH |
+| A10 | **Encoding scale (bandwidth) is the operative knob** for both kernels and variational models: it sets the kernel's effective rank and the accessible Fourier frequencies. Tuning it pushes quantum kernels towards classical ones. | G2 (RZ scale), G7, H6, H8, H9; our E3 | HIGH |
+| A11 | Re-uploading-style models have **classical surrogates or twins**, so a quantum model must at least beat its classical twin to support any "quantumness" statement. | H10, G11, G6 | MEDIUM-HIGH |
+| A12 | Multi-dataset claims need **non-parametric rank statistics** (Friedman, Wilcoxon-Holm, CD diagrams) and wide CV intervals at n of 100-800. | H1, H2, H3, C12 | HIGH |
+| A13 | **Strong tabular baselines include gradient-boosted trees.** | H4, G4 | HIGH |
+
+### 8.2 Conflicts and their likely reasons
+| Conflict | Pro-quantum side | Sceptical side | Likely reason | What would change our reading |
+|---|---|---|---|---|
+| Kernel wins | G1 (+0.29 F1 vs linear; +0.068 vs C-tuned RBF), G2 (6/8 datasets) | G7 (tuning makes kernels classical), H6 (concentration), C12 (0/29 significant) | Baseline strength and tuning asymmetry; G1's stratum chosen post hoc; G2 single split | A tuned-bandwidth QSVM beating a rank-matched RBF **and** tuned LogReg/HGB significantly on several confirmation datasets |
+| Low-data advantage | G3 (engineered labels), G9 (vs parameter-matched CNN) | G9 itself (RBF/LogReg beat the QCNN), C13 | Choice of control: parameter-matched controls are weak; unconstrained tuned baselines are not | A quantum learning curve above tuned LogReg at N <= 50 on natural labels across dev datasets |
+| Hardware "helps" | G4 (lower variance on hardware), C12 Sec. 6.4 (HW above sim in 4/6) | G4's own leakage note; C12 "speculative"; G5 (mitigation needed just to recover) | Small n, aggregated rankings, noise acting as regulariser | Not testable here (no hardware); we report simulated degradation curves only |
+| Residual/readout bypass | G10 (+55%) | Parameter counts unmatched | The raw-input path is a classical model | E15 equal-head control |
+
+### 8.3 Implications for the multi-dataset round
+1. **Every quantum model gets a classical twin or control with matched capacity, plus the unconstrained tuned baselines (LogReg, RBF-SVM, RF, MLP, HGB).** Strength: HIGH. A claim survives only if it beats both.
+2. **Report effective rank and bandwidth per dataset** and test whether the QSVM gap tracks them (E12, E19). Strength: MEDIUM. What would change it: a significant, monotone relation on confirmation datasets.
+3. **Pre-register the development/confirmation split** so that the bandwidth, input-scaling and variant choices made on 4 development datasets are reported unchanged on 8+ confirmation datasets (H2 selection bias). Strength: HIGH.
+4. **Feature budget 5-7 is a real design dimension** (G4, C12 k-effect), but ranking must stay inside training folds (G4 leakage). Strength: MEDIUM.
+
+### 8.4 Additional claims we should NOT make (from the addendum)
+- "Quantum kernels keep a higher effective rank, so they are better." G1's rank argument only beats a collapsed linear kernel.
+- "Noise acts as a regulariser, so hardware will be better." It is speculative in C12 and G4, and untestable for us.
+- "Our circuits are hard to simulate classically." They are 4-10-qubit statevector simulations (G6, G14).
+- "A residual quantum head improves accuracy." Not without the equal classical head control (G10).
