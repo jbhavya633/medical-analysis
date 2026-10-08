@@ -7,9 +7,10 @@ Holm correction across the comparisons made within one dataset.
 
 import numpy as np
 from scipy.stats import wilcoxon
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import brier_score_loss, roc_auc_score
 
 from backend.ml.quantum import SEED
+from backend.ml.quantum.evaluate import sensitivity_at_specificity
 
 N_BOOT = 2000
 ALPHA = 0.05
@@ -51,8 +52,17 @@ def holm(pvalues: list[float]) -> list[float]:
     return adjusted.tolist()
 
 
+def sens_at_spec90(y, score) -> float:
+    return sensitivity_at_specificity(y, score, 0.90)
+
+
+# Secondary metric families, each Holm-corrected on its own (AUC is the primary comparison).
+SECONDARY_METRICS = {"brier": brier_score_loss, "sens_at_spec90": sens_at_spec90}
+
+
 def compare_to_reference(y, oof_scores: dict, fold_auc: dict, reference: str, seed=SEED) -> dict:
-    """AUC of every model vs the reference model on pooled OOF rows; Holm across the models compared."""
+    """AUC (plus Brier and sensitivity at 90% specificity) of every model vs the reference model on the same
+    pooled OOF rows; Holm across the models compared, separately per metric."""
     others = [m for m in oof_scores if m != reference]
     if reference not in oof_scores or not others:
         return {}
@@ -61,4 +71,8 @@ def compare_to_reference(y, oof_scores: dict, fold_auc: dict, reference: str, se
     for m, p_adj, w_adj in zip(others, holm([out[m]["p"] for m in others]),
                                holm([out[m]["p_wilcoxon"] for m in others])):
         out[m].update(p_holm=p_adj, p_wilcoxon_holm=w_adj, significant=bool(p_adj < ALPHA))
+    for key, metric in SECONDARY_METRICS.items():
+        sec = {m: paired_bootstrap(y, oof_scores[m], oof_scores[reference], metric=metric, seed=seed) for m in others}
+        for m, p_adj in zip(others, holm([sec[m]["p"] for m in others])):
+            out[m][key] = {**sec[m], "p_holm": p_adj, "significant": bool(p_adj < ALPHA)}
     return out

@@ -154,6 +154,7 @@ def test_binary_metrics_hand_computed():
     assert m["accuracy"] == pytest.approx(5 / 7)
     assert m["f1"] == pytest.approx(2 * 2 / (2 * 2 + 1 + 1))
     assert m["auc"] == pytest.approx(11 / 12)
+    assert m["brier"] == pytest.approx(np.mean((score - y_true) ** 2))
 
 
 def test_binary_metrics_single_class_auc_nan():

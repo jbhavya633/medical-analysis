@@ -28,6 +28,7 @@ def client(results_dir, monkeypatch):
 
 def test_benchmark_files_written(results_dir):
     for name in ("summary.json", "summary.md", "benchmark_breast_cancer.json", "roc_breast_cancer.png",
+                 "calibration_breast_cancer.png",
                  "learning_curve_breast_cancer.png", "importance_breast_cancer.png", "benchmark.log"):
         assert (results_dir / name).is_file(), name
     assert (results_dir / "models" / "breast_cancer_qsvm.joblib").is_file()

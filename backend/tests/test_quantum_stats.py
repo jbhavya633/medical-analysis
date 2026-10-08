@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from backend.ml.quantum.data import load_dataset, stratified_subsample
-from backend.ml.quantum.evaluate import cross_validate
+from backend.ml.quantum.evaluate import calibration_summary, cross_validate, reliability, sensitivity_at_specificity
 from backend.ml.quantum.stats import compare_to_reference, holm, paired_bootstrap, wilcoxon_p
 
 rng = np.random.default_rng(0)
@@ -40,12 +40,42 @@ def test_wilcoxon_zero_and_nonzero():
 
 
 def test_compare_to_reference_holm_and_flags():
-    out = compare_to_reference(Y, {"ref": GOOD, "a": NOISE, "b": GOOD + 0.001},
+    sig = lambda s: 1 / (1 + np.exp(-s))  # noqa: E731 - probabilities, as the models produce
+    out = compare_to_reference(Y, {"ref": sig(GOOD), "a": sig(NOISE), "b": sig(GOOD + 0.001)},
                                {"ref": [0.9] * 5, "a": [0.5] * 5, "b": [0.9] * 5}, "ref")
     assert set(out) == {"a", "b"}
     assert out["a"]["significant"] and not out["b"]["significant"]
     assert out["a"]["p_holm"] >= out["a"]["p"] and out["a"]["vs"] == "ref"
     assert compare_to_reference(Y, {"a": NOISE}, {"a": [0.5]}, "ref") == {}
+
+
+def test_reliability_and_ece_hand_computed():
+    y = np.array([0, 0, 1, 1])
+    p = np.array([0.05, 0.15, 0.85, 0.95])  # bins 0, 1, 8, 9: |0.05-0|,|0.15-0|,|0.85-1|,|0.95-1| each weight 1/4
+    ece, pts = reliability(y, p)
+    assert ece == pytest.approx((0.05 + 0.15 + 0.15 + 0.05) / 4)
+    assert [pt["bin"] for pt in pts] == [0, 1, 8, 9] and sum(pt["n"] for pt in pts) == 4
+    assert reliability(np.array([1]), np.array([1.0]))[1][0]["bin"] == 9  # p = 1.0 lands in the last bin
+
+
+def test_sensitivity_at_specificity():
+    y = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1])
+    s = np.array([.1, .2, .3, .4, .5, .6, .7, .8, .9, .95, .85, .92, .97, .99])
+    # spec >= 0.9 allows at most 1 FP: threshold 0.92 keeps 3 of 4 positives
+    assert sensitivity_at_specificity(y, s, 0.90) == pytest.approx(0.75)
+    assert sensitivity_at_specificity(y, s, 1.0) == pytest.approx(0.5)  # above 0.95: 0.97, 0.99
+
+
+def test_calibration_summary_keys():
+    c = calibration_summary(Y, np.clip(0.5 + 0.4 * (Y - 0.5) + 0.05, 0, 1))
+    assert set(c) == {"brier", "ece", "reliability", "sens_at_spec"} and set(c["sens_at_spec"]) == {"0.90", "0.95"}
+
+
+def test_compare_includes_secondary_metrics():
+    out = compare_to_reference(Y, {"ref": 1 / (1 + np.exp(-GOOD)), "a": 1 / (1 + np.exp(-NOISE))},
+                               {"ref": [0.9] * 5, "a": [0.5] * 5}, "ref")
+    assert out["a"]["brier"]["delta"] > 0 and out["a"]["brier"]["significant"]
+    assert out["a"]["sens_at_spec90"]["delta"] < 0
 
 
 def test_cross_validate_scores_every_row_once():

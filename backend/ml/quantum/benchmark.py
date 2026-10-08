@@ -2,7 +2,8 @@
 
 python -m backend.ml.quantum.benchmark --dataset all --seed 42 --n-qubits 6
 
-Writes results/benchmark_<dataset>.json, results/summary.json, results/summary.md, results/*.png,
+Writes results/benchmark_<dataset>.json, results/summary.json, results/summary.md, results/*.png
+(ROC, learning curve, calibration, importance),
 results/models/<dataset>_<model>.joblib and results/benchmark.log. Research prototype; not a diagnostic tool.
 """
 
@@ -126,7 +127,16 @@ def write_summary_md(all_results, config, path):
                          f"{m['gen_gap']['mean']:.3f} | {r['n_qubits'] or '-'} | {r['circuit_depth'] or '-'} | {r['n_params']} |")
         lines += ["", "ΔAUC: pooled out-of-fold AUC minus logistic regression's on the same rows; paired stratified "
                   "bootstrap (2,000 resamples) 95% CI. * = significant after Holm correction (alpha 0.05); "
-                  "otherwise not significant.", ""]
+                  "otherwise not significant.", "",
+                  "Calibration and decision utility (pooled out-of-fold predictions):", "",
+                  "| Model | Brier | ΔBrier vs LogReg [95% CI] | ECE (10 bins) | Sens @ 90% spec | Sens @ 95% spec |",
+                  "|---|---|---|---|---|---|"]
+        for name, r in ds["models"].items():
+            c = r["calibration"]
+            lines.append(f"| {MODEL_LABELS[name]} | {c['brier']:.3f} | "
+                         f"{format_delta(name, (r.get('vs_reference') or {}).get('brier'))} | {c['ece']:.3f} | "
+                         f"{c['sens_at_spec']['0.90']:.3f} | {c['sens_at_spec']['0.95']:.3f} |")
+        lines += ["", "ΔBrier < 0 means better calibrated than logistic regression.", ""]
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -180,6 +190,23 @@ def plot_dataset(ds, out_dir):
     fig.suptitle(f"Learning curves - {ds['info']['title']}", x=0.01, ha="left", color="#0b0b0b")
     fig.tight_layout()
     fig.savefig(out_dir / f"learning_curve_{name}.png", dpi=120)
+    plt.close(fig)
+
+    fig, axes = plt.subplots(1, 2, figsize=(9, 4), sharey=True)
+    for ax, (title, models) in zip(axes, groups):
+        ax.plot([0, 1], [0, 1], color="#a8a79f", linewidth=1, linestyle="--")
+        for m in models:
+            c = ds["models"][m]["calibration"]
+            pts = c["reliability"]
+            ax.plot([p["mean_pred"] for p in pts], [p["frac_pos"] for p in pts], color=MODEL_COLORS[m],
+                    linewidth=2, marker="o", markersize=4, label=f"{MODEL_LABELS[m]} (Brier {c['brier']:.3f})")
+        ax.set_title(title, color="#0b0b0b", loc="left")
+        ax.set_xlabel("Mean predicted P(disease)")
+        ax.legend(frameon=False, loc="upper left")
+    axes[0].set_ylabel("Observed fraction with disease")
+    fig.suptitle(f"Reliability, pooled out-of-fold - {ds['info']['title']}", x=0.01, ha="left", color="#0b0b0b")
+    fig.tight_layout()
+    fig.savefig(out_dir / f"calibration_{name}.png", dpi=120)
     plt.close(fig)
 
     picks = [m for m in ("logreg", "qsvm") if m in ds["models"]]
@@ -236,7 +263,8 @@ def main(argv=None):
                          "y": v["y"], "reference_model": v["reference_model"],
                          "models": {m: {key: r[key] for key in ("family", "metrics", "roc", "learning_curve",
                                                                   "n_qubits", "circuit_depth", "n_params",
-                                                                  "holdout", "explain", "oof", "vs_reference")
+                                                                  "holdout", "explain", "oof", "vs_reference",
+                                                                  "calibration")
                                         if key in r}
                                     for m, r in v["models"].items()}}
                      for k, v in all_results.items()},

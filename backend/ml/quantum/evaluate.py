@@ -3,7 +3,7 @@
 import time
 
 import numpy as np
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_auc_score, roc_curve
+from sklearn.metrics import accuracy_score, brier_score_loss, confusion_matrix, f1_score, roc_auc_score, roc_curve
 from sklearn.model_selection import StratifiedKFold, train_test_split
 
 from backend.ml.quantum import SEED
@@ -16,7 +16,8 @@ from backend.ml.quantum.vqc import VQCClassifier
 
 QUANTUM_MODELS = ["qsvm", "vqc", "hybrid_qnn"]
 ALL_MODELS = CLASSICAL_MODELS + QUANTUM_MODELS
-METRIC_KEYS = ["accuracy", "sensitivity", "specificity", "auc", "f1"]
+METRIC_KEYS = ["accuracy", "sensitivity", "specificity", "auc", "f1", "brier"]
+SPECIFICITY_TARGETS = (0.90, 0.95)
 
 
 def build_model(name: str, n_qubits: int, seed: int = SEED, epochs: int = 40, n_layers: int = 2):
@@ -42,7 +43,37 @@ def binary_metrics(y_true, y_pred, y_score) -> dict:
         "specificity": float(tn / (tn + fp)) if tn + fp else float("nan"),
         "auc": float(roc_auc_score(y_true, y_score)) if len(set(y_true)) == 2 else float("nan"),
         "f1": float(f1_score(y_true, y_pred, zero_division=0)),
+        "brier": float(brier_score_loss(y_true, y_score)),
     }
+
+
+def sensitivity_at_specificity(y_true, y_score, specificity: float) -> float:
+    """Highest sensitivity among ROC thresholds whose specificity is >= the target."""
+    fpr, tpr, _ = roc_curve(y_true, y_score)
+    ok = fpr <= 1 - specificity + 1e-12
+    return float(tpr[ok].max())
+
+
+def reliability(y_true, y_score, n_bins: int = 10) -> tuple[float, list[dict]]:
+    """Expected calibration error (equal-width bins, weighted by bin size) and the per-bin points."""
+    y_true, y_score = np.asarray(y_true, dtype=float), np.asarray(y_score, dtype=float)
+    bins = np.clip((y_score * n_bins).astype(int), 0, n_bins - 1)
+    points, ece = [], 0.0
+    for b in range(n_bins):
+        mask = bins == b
+        if mask.any():
+            mean_pred, frac_pos = float(y_score[mask].mean()), float(y_true[mask].mean())
+            ece += abs(mean_pred - frac_pos) * mask.mean()
+            points.append({"bin": b, "mean_pred": round(mean_pred, 4), "frac_pos": round(frac_pos, 4),
+                           "n": int(mask.sum())})
+    return float(ece), points
+
+
+def calibration_summary(y_true, y_score) -> dict:
+    """Pooled out-of-fold calibration and decision metrics (per-fold ECE at ~60 rows is too noisy)."""
+    ece, points = reliability(y_true, y_score)
+    return {"brier": float(brier_score_loss(y_true, y_score)), "ece": ece, "reliability": points,
+            "sens_at_spec": {f"{s:.2f}": sensitivity_at_specificity(y_true, y_score, s) for s in SPECIFICITY_TARGETS}}
 
 
 def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, method="mutual_info", epochs=40):
@@ -94,6 +125,7 @@ def cross_validate(name, X, y, n_qubits=6, n_splits=5, seed=SEED, max_train=200,
         "n_params": count_params(model),
         "loss_history": [round(v, 5) for v in getattr(model, "loss_history_", [])],
         "oof": {"score": oof_score.round(5).tolist(), "fold": oof_fold.tolist()},
+        "calibration": calibration_summary(y, oof_score),
     }
 
 
