@@ -1,0 +1,139 @@
+﻿0 logreg {'auc': 0.9475, 'acc': 0.8689, 'brier': 0.0921, 'ece': 0.1217, 'sens@spec90': 0.8571, 'train_s': 0.0}
+0 svm_rbf {'auc': 0.9491, 'acc': 0.8852, 'brier': 0.1006, 'ece': 0.1148, 'sens@spec90': 0.8929, 'train_s': 0.0}
+0 random_forest {'auc': 0.9735, 'acc': 0.918, 'brier': 0.0815, 'ece': 0.127, 'sens@spec90': 0.9286, 'train_s': 0.1}
+0 mlp {'auc': 0.9453, 'acc': 0.8852, 'brier': 0.0926, 'ece': 0.1174, 'sens@spec90': 0.8929, 'train_s': 0.1}
+0 qsvm {'auc': 0.8696, 'acc': 0.8361, 'brier': 0.1365, 'ece': 0.0956, 'sens@spec90': 0.75, 'train_s': 0.1}
+0 vqc {'auc': 0.783, 'acc': 0.7213, 'brier': 0.1891, 'ece': 0.1501, 'sens@spec90': 0.6429, 'train_s': 3.0}
+0 vqc_platt {'auc': 0.7992, 'acc': 0.7541, 'brier': 0.1964, 'ece': 0.1344, 'sens@spec90': 0.5, 'train_s': 3.9}
+1 logreg {'auc': 0.8961, 'acc': 0.7541, 'brier': 0.1399, 'ece': 0.1466, 'sens@spec90': 0.6429, 'train_s': 0.0}
+1 svm_rbf {'auc': 0.8766, 'acc': 0.7541, 'brier': 0.1723, 'ece': 0.1151, 'sens@spec90': 0.6071, 'train_s': 0.0}
+1 random_forest {'auc': 0.8593, 'acc': 0.7705, 'brier': 0.1573, 'ece': 0.1392, 'sens@spec90': 0.6786, 'train_s': 0.2}
+1 mlp {'auc': 0.8506, 'acc': 0.7705, 'brier': 0.1558, 'ece': 0.1547, 'sens@spec90': 0.6429, 'train_s': 0.1}
+1 qsvm {'auc': 0.8701, 'acc': 0.7705, 'brier': 0.1438, 'ece': 0.082, 'sens@spec90': 0.6429, 'train_s': 0.0}
+1 vqc {'auc': 0.6526, 'acc': 0.6885, 'brier': 0.2196, 'ece': 0.1452, 'sens@spec90': 0.3571, 'train_s': 1.3}
+1 vqc_platt {'auc': 0.7013, 'acc': 0.6721, 'brier': 0.2185, 'ece': 0.0668, 'sens@spec90': 0.3214, 'train_s': 3.2}
+{
+ "label": "exploratory, n too small for conclusions",
+ "dataset": "heart",
+ "epochs_quantum": 15,
+ "folds": [
+  {
+   "fold": 0,
+   "logreg": {
+    "auc": 0.9475,
+    "acc": 0.8689,
+    "brier": 0.0921,
+    "ece": 0.1217,
+    "sens@spec90": 0.8571,
+    "train_s": 0.0
+   },
+   "svm_rbf": {
+    "auc": 0.9491,
+    "acc": 0.8852,
+    "brier": 0.1006,
+    "ece": 0.1148,
+    "sens@spec90": 0.8929,
+    "train_s": 0.0
+   },
+   "random_forest": {
+    "auc": 0.9735,
+    "acc": 0.918,
+    "brier": 0.0815,
+    "ece": 0.127,
+    "sens@spec90": 0.9286,
+    "train_s": 0.1
+   },
+   "mlp": {
+    "auc": 0.9453,
+    "acc": 0.8852,
+    "brier": 0.0926,
+    "ece": 0.1174,
+    "sens@spec90": 0.8929,
+    "train_s": 0.1
+   },
+   "qsvm": {
+    "auc": 0.8696,
+    "acc": 0.8361,
+    "brier": 0.1365,
+    "ece": 0.0956,
+    "sens@spec90": 0.75,
+    "train_s": 0.1
+   },
+   "vqc": {
+    "auc": 0.783,
+    "acc": 0.7213,
+    "brier": 0.1891,
+    "ece": 0.1501,
+    "sens@spec90": 0.6429,
+    "train_s": 3.0
+   },
+   "vqc_platt": {
+    "auc": 0.7992,
+    "acc": 0.7541,
+    "brier": 0.1964,
+    "ece": 0.1344,
+    "sens@spec90": 0.5,
+    "train_s": 3.9
+   }
+  },
+  {
+   "fold": 1,
+   "logreg": {
+    "auc": 0.8961,
+    "acc": 0.7541,
+    "brier": 0.1399,
+    "ece": 0.1466,
+    "sens@spec90": 0.6429,
+    "train_s": 0.0
+   },
+   "svm_rbf": {
+    "auc": 0.8766,
+    "acc": 0.7541,
+    "brier": 0.1723,
+    "ece": 0.1151,
+    "sens@spec90": 0.6071,
+    "train_s": 0.0
+   },
+   "random_forest": {
+    "auc": 0.8593,
+    "acc": 0.7705,
+    "brier": 0.1573,
+    "ece": 0.1392,
+    "sens@spec90": 0.6786,
+    "train_s": 0.2
+   },
+   "mlp": {
+    "auc": 0.8506,
+    "acc": 0.7705,
+    "brier": 0.1558,
+    "ece": 0.1547,
+    "sens@spec90": 0.6429,
+    "train_s": 0.1
+   },
+   "qsvm": {
+    "auc": 0.8701,
+    "acc": 0.7705,
+    "brier": 0.1438,
+    "ece": 0.082,
+    "sens@spec90": 0.6429,
+    "train_s": 0.0
+   },
+   "vqc": {
+    "auc": 0.6526,
+    "acc": 0.6885,
+    "brier": 0.2196,
+    "ece": 0.1452,
+    "sens@spec90": 0.3571,
+    "train_s": 1.3
+   },
+   "vqc_platt": {
+    "auc": 0.7013,
+    "acc": 0.6721,
+    "brier": 0.2185,
+    "ece": 0.0668,
+    "sens@spec90": 0.3214,
+    "train_s": 3.2
+   }
+  }
+ ]
+}

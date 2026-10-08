@@ -1,0 +1,156 @@
+﻿noise 0.0 None {'auc': 0.783, 'acc': 0.7213, 'brier': 0.1891, 'ece': 0.1501, 'sens@spec90': 0.6429, 'ms_per_sample': 21.28}
+noise 0.001 None {'auc': 0.783, 'acc': 0.7213, 'brier': 0.1891, 'ece': 0.1687, 'sens@spec90': 0.6429, 'ms_per_sample': 25.36}
+noise 0.01 None {'auc': 0.783, 'acc': 0.7213, 'brier': 0.1897, 'ece': 0.2025, 'sens@spec90': 0.6429, 'ms_per_sample': 25.76}
+noise 0.05 None {'auc': 0.783, 'acc': 0.7213, 'brier': 0.1945, 'ece': 0.1607, 'sens@spec90': 0.6429, 'ms_per_sample': 26.98}
+noise 0.1 None {'auc': 0.783, 'acc': 0.7213, 'brier': 0.2054, 'ece': 0.1213, 'sens@spec90': 0.6429, 'ms_per_sample': 29.6}
+noise 0.0 1000 {'auc': 0.7771, 'acc': 0.7213, 'brier': 0.1931, 'ece': 0.1743, 'sens@spec90': 0.5714, 'ms_per_sample': 23.68}
+noise 0.01 1000 {'auc': 0.7814, 'acc': 0.7213, 'brier': 0.1913, 'ece': 0.1888, 'sens@spec90': 0.6071, 'ms_per_sample': 31.25}
+scale default.qubit 4 {'fwd_200_s': 0.005, 'bwd_s': 0.02}
+scale lightning.qubit 4 {'fwd_200_s': 0.429, 'bwd_s': 0.137}
+scale default.mixed 4 {'fwd_200_s': 0.071, 'bwd_s': 0.048}
+scale default.qubit 6 {'fwd_200_s': 0.012, 'bwd_s': 0.01}
+scale lightning.qubit 6 {'fwd_200_s': 0.599, 'bwd_s': 0.211}
+scale default.mixed 6 {'fwd_200_s': 0.332, 'bwd_s': 0.894}
+scale default.qubit 8 {'fwd_200_s': 0.072, 'bwd_s': 0.11}
+scale lightning.qubit 8 {'fwd_200_s': 1.113, 'bwd_s': 0.287}
+scale default.mixed 8 {'fwd_200_s': 28.189, 'bwd_s': 24.293}
+scale default.qubit 10 {'fwd_200_s': 0.239, 'bwd_s': 0.162}
+scale lightning.qubit 10 {'fwd_200_s': 2.044, 'bwd_s': 0.372}
+{
+ "label": "exploratory, n too small for conclusions",
+ "python": "3.13.3",
+ "pennylane": "0.45.1",
+ "torch": "2.14.1+cpu",
+ "noise_vqc_heart_fold0": {
+  "p=0.0,shots=None": {
+   "auc": 0.783,
+   "acc": 0.7213,
+   "brier": 0.1891,
+   "ece": 0.1501,
+   "sens@spec90": 0.6429,
+   "ms_per_sample": 21.28
+  },
+  "p=0.001,shots=None": {
+   "auc": 0.783,
+   "acc": 0.7213,
+   "brier": 0.1891,
+   "ece": 0.1687,
+   "sens@spec90": 0.6429,
+   "ms_per_sample": 25.36
+  },
+  "p=0.01,shots=None": {
+   "auc": 0.783,
+   "acc": 0.7213,
+   "brier": 0.1897,
+   "ece": 0.2025,
+   "sens@spec90": 0.6429,
+   "ms_per_sample": 25.76
+  },
+  "p=0.05,shots=None": {
+   "auc": 0.783,
+   "acc": 0.7213,
+   "brier": 0.1945,
+   "ece": 0.1607,
+   "sens@spec90": 0.6429,
+   "ms_per_sample": 26.98
+  },
+  "p=0.1,shots=None": {
+   "auc": 0.783,
+   "acc": 0.7213,
+   "brier": 0.2054,
+   "ece": 0.1213,
+   "sens@spec90": 0.6429,
+   "ms_per_sample": 29.6
+  },
+  "p=0.0,shots=1000": {
+   "auc": 0.7771,
+   "acc": 0.7213,
+   "brier": 0.1931,
+   "ece": 0.1743,
+   "sens@spec90": 0.5714,
+   "ms_per_sample": 23.68
+  },
+  "p=0.01,shots=1000": {
+   "auc": 0.7814,
+   "acc": 0.7213,
+   "brier": 0.1913,
+   "ece": 0.1888,
+   "sens@spec90": 0.6071,
+   "ms_per_sample": 31.25
+  }
+ },
+ "noiseless_reference_backend_predict": {
+  "auc": 0.783,
+  "acc": 0.7213,
+  "brier": 0.1891,
+  "ece": 0.1501,
+  "sens@spec90": 0.6429
+ },
+ "scaling": {
+  "default.qubit/4q": {
+   "fwd_200_s": 0.005,
+   "bwd_s": 0.02
+  },
+  "lightning.qubit/4q": {
+   "fwd_200_s": 0.429,
+   "bwd_s": 0.137
+  },
+  "default.mixed/4q": {
+   "fwd_200_s": 0.071,
+   "bwd_s": 0.048
+  },
+  "default.qubit/6q": {
+   "fwd_200_s": 0.012,
+   "bwd_s": 0.01
+  },
+  "lightning.qubit/6q": {
+   "fwd_200_s": 0.599,
+   "bwd_s": 0.211
+  },
+  "default.mixed/6q": {
+   "fwd_200_s": 0.332,
+   "bwd_s": 0.894
+  },
+  "default.qubit/8q": {
+   "fwd_200_s": 0.072,
+   "bwd_s": 0.11
+  },
+  "lightning.qubit/8q": {
+   "fwd_200_s": 1.113,
+   "bwd_s": 0.287
+  },
+  "default.mixed/8q": {
+   "fwd_200_s": 28.189,
+   "bwd_s": 24.293
+  },
+  "default.qubit/10q": {
+   "fwd_200_s": 0.239,
+   "bwd_s": 0.162
+  },
+  "lightning.qubit/10q": {
+   "fwd_200_s": 2.044,
+   "bwd_s": 0.372
+  },
+  "default.mixed/10q": "skipped (density matrix 4^n; >8 qubits too slow for budget)"
+ },
+ "gate_counts": {
+  "vqc": {
+   "gates": {
+    "RY": 18,
+    "RZ": 12,
+    "CNOT": 12
+   },
+   "depth": 17,
+   "num_gates": 42
+  },
+  "qsvm_zz_map": {
+   "gates": {
+    "RY": 12,
+    "RZ": 22,
+    "CNOT": 20
+   },
+   "depth": 25,
+   "num_gates": 54
+  }
+ }
+}

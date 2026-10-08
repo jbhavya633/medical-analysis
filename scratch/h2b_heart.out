@@ -1,0 +1,73 @@
+﻿0 scale_only {'auc': 0.9399, 'acc': 0.9016, 'brier': 0.1147, 'ece': 0.1527, 'sens@spec90': 0.8214, 'params': 38, 'train_s': 4.0}
+0 reup_allz {'auc': 0.8945, 'acc': 0.7869, 'brier': 0.1339, 'ece': 0.1458, 'sens@spec90': 0.7143, 'params': 38, 'train_s': 2.1}
+0 noent_reup_allz {'auc': 0.9205, 'acc': 0.8033, 'brier': 0.113, 'ece': 0.1189, 'sens@spec90': 0.7857, 'params': 38, 'train_s': 1.9}
+1 scale_only {'auc': 0.8474, 'acc': 0.7869, 'brier': 0.1697, 'ece': 0.1747, 'sens@spec90': 0.6429, 'params': 38, 'train_s': 2.5}
+1 reup_allz {'auc': 0.8431, 'acc': 0.7705, 'brier': 0.1607, 'ece': 0.0753, 'sens@spec90': 0.5714, 'params': 38, 'train_s': 4.3}
+1 noent_reup_allz {'auc': 0.8853, 'acc': 0.7541, 'brier': 0.1483, 'ece': 0.1349, 'sens@spec90': 0.5357, 'params': 38, 'train_s': 3.0}
+{
+ "label": "exploratory, n too small for conclusions",
+ "dataset": "heart",
+ "epochs": 15,
+ "folds": [
+  {
+   "fold": 0,
+   "scale_only": {
+    "auc": 0.9399,
+    "acc": 0.9016,
+    "brier": 0.1147,
+    "ece": 0.1527,
+    "sens@spec90": 0.8214,
+    "params": 38,
+    "train_s": 4.0
+   },
+   "reup_allz": {
+    "auc": 0.8945,
+    "acc": 0.7869,
+    "brier": 0.1339,
+    "ece": 0.1458,
+    "sens@spec90": 0.7143,
+    "params": 38,
+    "train_s": 2.1
+   },
+   "noent_reup_allz": {
+    "auc": 0.9205,
+    "acc": 0.8033,
+    "brier": 0.113,
+    "ece": 0.1189,
+    "sens@spec90": 0.7857,
+    "params": 38,
+    "train_s": 1.9
+   }
+  },
+  {
+   "fold": 1,
+   "scale_only": {
+    "auc": 0.8474,
+    "acc": 0.7869,
+    "brier": 0.1697,
+    "ece": 0.1747,
+    "sens@spec90": 0.6429,
+    "params": 38,
+    "train_s": 2.5
+   },
+   "reup_allz": {
+    "auc": 0.8431,
+    "acc": 0.7705,
+    "brier": 0.1607,
+    "ece": 0.0753,
+    "sens@spec90": 0.5714,
+    "params": 38,
+    "train_s": 4.3
+   },
+   "noent_reup_allz": {
+    "auc": 0.8853,
+    "acc": 0.7541,
+    "brier": 0.1483,
+    "ece": 0.1349,
+    "sens@spec90": 0.5357,
+    "params": 38,
+    "train_s": 3.0
+   }
+  }
+ ]
+}

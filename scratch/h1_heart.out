@@ -1,0 +1,88 @@
+﻿{
+ "label": "exploratory, n too small for conclusions",
+ "dataset": "heart",
+ "folds": [
+  {
+   "fold": 0,
+   "features": [
+    "sex",
+    "cp",
+    "oldpeak",
+    "slope",
+    "ca",
+    "thal"
+   ],
+   "mean_offdiag_kernel": {
+    "0.05": 0.9614,
+    "0.1": 0.842,
+    "0.2": 0.3968,
+    "0.35": 0.0909,
+    "0.5": 0.0595,
+    "0.75": 0.0573,
+    "1.0": 0.1006
+   },
+   "chosen": {
+    "s": 0.1,
+    "C": 10.0
+   },
+   "inner_auc": 0.9038,
+   "untuned_s1_C1": {
+    "auc": 0.8696,
+    "acc": 0.8361,
+    "brier": 0.1365,
+    "ece": 0.0956,
+    "sens@spec90": 0.75
+   },
+   "tuned": {
+    "auc": 0.954,
+    "acc": 0.918,
+    "brier": 0.095,
+    "ece": 0.1415,
+    "sens@spec90": 0.9286
+   },
+   "runtime_s": 0.4,
+   "inner_fits": 63
+  },
+  {
+   "fold": 1,
+   "features": [
+    "sex",
+    "cp",
+    "oldpeak",
+    "slope",
+    "ca",
+    "thal"
+   ],
+   "mean_offdiag_kernel": {
+    "0.05": 0.9609,
+    "0.1": 0.8398,
+    "0.2": 0.3928,
+    "0.35": 0.0861,
+    "0.5": 0.0581,
+    "0.75": 0.0563,
+    "1.0": 0.0923
+   },
+   "chosen": {
+    "s": 0.2,
+    "C": 1.0
+   },
+   "inner_auc": 0.9205,
+   "untuned_s1_C1": {
+    "auc": 0.8701,
+    "acc": 0.7705,
+    "brier": 0.1438,
+    "ece": 0.082,
+    "sens@spec90": 0.6429
+   },
+   "tuned": {
+    "auc": 0.8571,
+    "acc": 0.7541,
+    "brier": 0.1668,
+    "ece": 0.1376,
+    "sens@spec90": 0.6429
+   },
+   "runtime_s": 0.4,
+   "inner_fits": 63
+  }
+ ]
+}

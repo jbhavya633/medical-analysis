@@ -1,0 +1,88 @@
+﻿{
+ "label": "exploratory, n too small for conclusions",
+ "dataset": "breast_cancer",
+ "folds": [
+  {
+   "fold": 0,
+   "features": [
+    "mean area",
+    "mean concave points",
+    "worst radius",
+    "worst perimeter",
+    "worst area",
+    "worst concave points"
+   ],
+   "mean_offdiag_kernel": {
+    "0.05": 0.9877,
+    "0.1": 0.9425,
+    "0.2": 0.664,
+    "0.35": 0.3598,
+    "0.5": 0.2049,
+    "0.75": 0.0742,
+    "1.0": 0.0369
+   },
+   "chosen": {
+    "s": 0.2,
+    "C": 1.0
+   },
+   "inner_auc": 0.989,
+   "untuned_s1_C1": {
+    "auc": 0.9895,
+    "acc": 0.9298,
+    "brier": 0.0577,
+    "ece": 0.1036,
+    "sens@spec90": 1.0
+   },
+   "tuned": {
+    "auc": 0.998,
+    "acc": 0.9474,
+    "brier": 0.0268,
+    "ece": 0.0624,
+    "sens@spec90": 1.0
+   },
+   "runtime_s": 0.4,
+   "inner_fits": 63
+  },
+  {
+   "fold": 1,
+   "features": [
+    "mean perimeter",
+    "mean concave points",
+    "worst radius",
+    "worst perimeter",
+    "worst area",
+    "worst concave points"
+   ],
+   "mean_offdiag_kernel": {
+    "0.05": 0.9889,
+    "0.1": 0.9471,
+    "0.2": 0.6702,
+    "0.35": 0.3409,
+    "0.5": 0.2097,
+    "0.75": 0.0848,
+    "1.0": 0.0449
+   },
+   "chosen": {
+    "s": 0.1,
+    "C": 10.0
+   },
+   "inner_auc": 0.9885,
+   "untuned_s1_C1": {
+    "auc": 0.9168,
+    "acc": 0.8684,
+    "brier": 0.1093,
+    "ece": 0.0924,
+    "sens@spec90": 0.7907
+   },
+   "tuned": {
+    "auc": 0.982,
+    "acc": 0.9035,
+    "brier": 0.0567,
+    "ece": 0.0585,
+    "sens@spec90": 0.9535
+   },
+   "runtime_s": 0.3,
+   "inner_fits": 63
+  }
+ ]
+}

@@ -1,0 +1,133 @@
+﻿0 base {'auc': 0.783, 'acc': 0.7213, 'brier': 0.1891, 'ece': 0.1501, 'sens@spec90': 0.6429, 'params': 26, 'train_s': 3.1}
+0 reupload {'auc': 0.9475, 'acc': 0.8525, 'brier': 0.1039, 'ece': 0.1178, 'sens@spec90': 0.7143, 'params': 38, 'train_s': 2.0}
+0 reup_allz {'auc': 0.8945, 'acc': 0.7869, 'brier': 0.1339, 'ece': 0.1458, 'sens@spec90': 0.7143, 'params': 38, 'train_s': 2.0}
+0 noent {'auc': 0.6034, 'acc': 0.5902, 'brier': 0.2363, 'ece': 0.0398, 'sens@spec90': 0.0357, 'params': 26, 'train_s': 1.3}
+0 hybrid {'auc': 0.9529, 'acc': 0.918, 'brier': 0.0857, 'ece': 0.1009, 'sens@spec90': 0.9286, 'params': 73, 'train_s': 1.8}
+0 hybrid_cls {'auc': 0.9508, 'acc': 0.8852, 'brier': 0.0871, 'ece': 0.1336, 'sens@spec90': 0.8929, 'params': 91, 'train_s': 0.1}
+1 base {'auc': 0.6526, 'acc': 0.6885, 'brier': 0.2196, 'ece': 0.1452, 'sens@spec90': 0.3571, 'params': 26, 'train_s': 1.4}
+1 reupload {'auc': 0.8323, 'acc': 0.7869, 'brier': 0.1654, 'ece': 0.1508, 'sens@spec90': 0.6071, 'params': 38, 'train_s': 1.9}
+1 reup_allz {'auc': 0.8431, 'acc': 0.7705, 'brier': 0.1607, 'ece': 0.0753, 'sens@spec90': 0.5714, 'params': 38, 'train_s': 3.0}
+1 noent {'auc': 0.5974, 'acc': 0.5574, 'brier': 0.2506, 'ece': 0.0933, 'sens@spec90': 0.0357, 'params': 26, 'train_s': 1.7}
+1 hybrid {'auc': 0.8084, 'acc': 0.7213, 'brier': 0.1854, 'ece': 0.138, 'sens@spec90': 0.6429, 'params': 73, 'train_s': 2.4}
+1 hybrid_cls {'auc': 0.869, 'acc': 0.7705, 'brier': 0.1641, 'ece': 0.1572, 'sens@spec90': 0.5714, 'params': 91, 'train_s': 0.1}
+{
+ "label": "exploratory, n too small for conclusions",
+ "dataset": "heart",
+ "epochs": 15,
+ "folds": [
+  {
+   "fold": 0,
+   "base": {
+    "auc": 0.783,
+    "acc": 0.7213,
+    "brier": 0.1891,
+    "ece": 0.1501,
+    "sens@spec90": 0.6429,
+    "params": 26,
+    "train_s": 3.1
+   },
+   "reupload": {
+    "auc": 0.9475,
+    "acc": 0.8525,
+    "brier": 0.1039,
+    "ece": 0.1178,
+    "sens@spec90": 0.7143,
+    "params": 38,
+    "train_s": 2.0
+   },
+   "reup_allz": {
+    "auc": 0.8945,
+    "acc": 0.7869,
+    "brier": 0.1339,
+    "ece": 0.1458,
+    "sens@spec90": 0.7143,
+    "params": 38,
+    "train_s": 2.0
+   },
+   "noent": {
+    "auc": 0.6034,
+    "acc": 0.5902,
+    "brier": 0.2363,
+    "ece": 0.0398,
+    "sens@spec90": 0.0357,
+    "params": 26,
+    "train_s": 1.3
+   },
+   "hybrid": {
+    "auc": 0.9529,
+    "acc": 0.918,
+    "brier": 0.0857,
+    "ece": 0.1009,
+    "sens@spec90": 0.9286,
+    "params": 73,
+    "train_s": 1.8
+   },
+   "hybrid_cls": {
+    "auc": 0.9508,
+    "acc": 0.8852,
+    "brier": 0.0871,
+    "ece": 0.1336,
+    "sens@spec90": 0.8929,
+    "params": 91,
+    "train_s": 0.1
+   }
+  },
+  {
+   "fold": 1,
+   "base": {
+    "auc": 0.6526,
+    "acc": 0.6885,
+    "brier": 0.2196,
+    "ece": 0.1452,
+    "sens@spec90": 0.3571,
+    "params": 26,
+    "train_s": 1.4
+   },
+   "reupload": {
+    "auc": 0.8323,
+    "acc": 0.7869,
+    "brier": 0.1654,
+    "ece": 0.1508,
+    "sens@spec90": 0.6071,
+    "params": 38,
+    "train_s": 1.9
+   },
+   "reup_allz": {
+    "auc": 0.8431,
+    "acc": 0.7705,
+    "brier": 0.1607,
+    "ece": 0.0753,
+    "sens@spec90": 0.5714,
+    "params": 38,
+    "train_s": 3.0
+   },
+   "noent": {
+    "auc": 0.5974,
+    "acc": 0.5574,
+    "brier": 0.2506,
+    "ece": 0.0933,
+    "sens@spec90": 0.0357,
+    "params": 26,
+    "train_s": 1.7
+   },
+   "hybrid": {
+    "auc": 0.8084,
+    "acc": 0.7213,
+    "brier": 0.1854,
+    "ece": 0.138,
+    "sens@spec90": 0.6429,
+    "params": 73,
+    "train_s": 2.4
+   },
+   "hybrid_cls": {
+    "auc": 0.869,
+    "acc": 0.7705,
+    "brier": 0.1641,
+    "ece": 0.1572,
+    "sens@spec90": 0.5714,
+    "params": 91,
+    "train_s": 0.1
+   }
+  }
+ ]
+}
