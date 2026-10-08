@@ -10,7 +10,7 @@ from backend.ml.quantum import service
 router = APIRouter(prefix="/api/qml", tags=["Hybrid QML (research prototype - not a diagnostic tool)"])
 
 DatasetId = Literal["breast_cancer", "heart"]
-ModelId = Literal["logreg", "svm_rbf", "random_forest", "mlp", "qsvm", "vqc", "hybrid_qnn"]
+ModelId = Literal["logreg", "svm_rbf", "random_forest", "mlp", "hgb", "qsvm", "vqc", "hybrid_qnn"]
 
 
 class TrainRequest(BaseModel):

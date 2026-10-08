@@ -101,6 +101,70 @@ def main(argv=None):
                   f"p_holm {r['p_holm']:.3f}{' *' if r['significant'] else ''}")
 
 
+def corrected_resampled_ttest(a, b, n_train: int, n_test: int) -> dict:
+    """Nadeau & Bengio corrected resampled t-test on paired per-fold scores from repeated k-fold CV.
+
+    The variance of the mean difference is inflated by (1/J + n_test/n_train) instead of 1/J to account for the
+    overlap between training sets (J = repeats x folds). Two-sided p from Student t with J - 1 df.
+    """
+    from scipy.stats import t as student_t
+    d = np.asarray(a, dtype=float) - np.asarray(b, dtype=float)
+    J = len(d)
+    mean, var = float(d.mean()), float(d.var(ddof=1)) if J > 1 else 0.0
+    if J < 2 or var == 0:
+        return {"delta": mean, "t": 0.0 if mean == 0 else float("inf") * np.sign(mean),
+                "p": 1.0 if mean == 0 else 0.0, "df": J - 1}
+    se = np.sqrt((1 / J + n_test / n_train) * var)
+    t = mean / se
+    return {"delta": mean, "t": float(t), "p": float(2 * student_t.sf(abs(t), J - 1)), "df": J - 1,
+            "ci95": [float(mean - student_t.ppf(0.975, J - 1) * se), float(mean + student_t.ppf(0.975, J - 1) * se)]}
+
+
+def friedman_nemenyi(scores: dict[str, dict[str, float]], alpha: float = ALPHA) -> dict:
+    """scores[model][dataset] (higher is better). Friedman test over datasets, mean ranks (1 = best) and the
+    Nemenyi critical difference CD = q_alpha * sqrt(k (k + 1) / (6 N)) (Demsar 2006)."""
+    from scipy.stats import friedmanchisquare, rankdata, studentized_range
+    models = list(scores)
+    datasets = sorted(set.intersection(*[set(scores[m]) for m in models]))
+    M = np.array([[scores[m][d] for m in models] for d in datasets])  # N x k
+    ranks = np.array([rankdata(-row) for row in M])
+    k, N = len(models), len(datasets)
+    stat, p = friedmanchisquare(*M.T) if k >= 3 and N >= 2 else (float("nan"), float("nan"))
+    q = studentized_range.ppf(1 - alpha, k, np.inf) / np.sqrt(2)
+    return {"models": models, "datasets": datasets, "mean_rank": dict(zip(models, ranks.mean(axis=0).tolist())),
+            "friedman_stat": float(stat), "friedman_p": float(p), "cd": float(q * np.sqrt(k * (k + 1) / (6 * N))),
+            "n_datasets": N, "k_models": k}
+
+
+def wilcoxon_holm_pairs(scores: dict[str, dict[str, float]], pairs: list[tuple[str, str]], seed=SEED) -> list[dict]:
+    """Pre-specified model pairs compared across datasets: Wilcoxon signed-rank (two-sided), Holm across the pairs,
+    median difference with a bootstrap 95% CI over datasets."""
+    rows = []
+    rng = np.random.default_rng(seed)
+    for a, b in pairs:
+        ds = sorted(set(scores[a]) & set(scores[b]))
+        d = np.array([scores[a][x] - scores[b][x] for x in ds])
+        boots = [np.median(rng.choice(d, len(d))) for _ in range(N_BOOT)] if len(d) else [np.nan]
+        rows.append({"a": a, "b": b, "n_datasets": len(ds), "median_delta": float(np.median(d)) if len(d) else None,
+                     "median_ci95": [float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))],
+                     "p": wilcoxon_p(d, np.zeros_like(d)) if len(d) >= 2 else 1.0,
+                     "wins_a": int((d > 0).sum()), "wins_b": int((d < 0).sum())})
+    for r, p_adj in zip(rows, holm([r["p"] for r in rows])):
+        r.update(p_holm=p_adj, significant=bool(p_adj < ALPHA))
+    return rows
+
+
+def win_tie_loss(per_dataset_tests: dict[str, dict]) -> dict:
+    """Counts over datasets from per-dataset corrected tests: win/loss = significant after Holm, else tie."""
+    out = {"win": 0, "tie": 0, "loss": 0}
+    for t in per_dataset_tests.values():
+        if t.get("significant"):
+            out["win" if t["delta"] > 0 else "loss"] += 1
+        else:
+            out["tie"] += 1
+    return out
+
+
 def sens_at_spec90(y, score) -> float:
     return sensitivity_at_specificity(y, score, 0.90)
 

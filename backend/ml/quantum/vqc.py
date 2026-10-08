@@ -190,3 +190,36 @@ class VQCClassifier(TorchQuantumClassifier):
 
     def _circuit_inputs(self, x):
         return np.tile(x, self.n_layers) if self.input_scaling == "reupload" else x
+
+
+class _TrigTwinModule(torch.nn.Module):
+    """Classical twin of the re-uploading VQC (docs/OPTIMIZATION_PLAN.md E16; Schuld et al. 2021): the same trainable
+    per-layer angles s_{l,i} x_i, mapped to their first Fourier features cos/sin and combined by a linear head.
+    It has the circuit's input frequencies but no products across features. 2 layers x 6 inputs: 12 + 25 = 37 params."""
+
+    def __init__(self, n_qubits, n_layers):
+        super().__init__()
+        self.in_scale = torch.nn.Parameter(torch.ones(n_layers, n_qubits))
+        self.head = torch.nn.Linear(2 * n_layers * n_qubits, 1)
+
+    def forward(self, x):
+        angles = self.in_scale.unsqueeze(0) * x.unsqueeze(1)
+        return self.head(torch.cat([torch.cos(angles), torch.sin(angles)], dim=-1).reshape(len(x), -1))
+
+
+class TrigTwinClassifier(TorchQuantumClassifier):
+    """Purely classical; trained with the same Adam/BCE loop and grid as the VQC it mirrors."""
+
+    def __init__(self, n_qubits=6, n_layers=2, epochs=40, lr=0.05, batch_size=32, seed=SEED):
+        self.n_qubits = n_qubits
+        self.n_layers = n_layers
+        self.epochs = epochs
+        self.lr = lr
+        self.batch_size = batch_size
+        self.seed = seed
+
+    def _build(self):
+        return _TrigTwinModule(self.n_qubits, self.n_layers)
+
+    def _qnode(self, **sim):
+        return None

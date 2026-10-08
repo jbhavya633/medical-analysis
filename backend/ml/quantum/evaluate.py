@@ -10,10 +10,10 @@ from sklearn.pipeline import Pipeline
 from backend.ml.quantum import SEED
 from backend.ml.quantum.baselines import CLASSICAL_GRIDS, CLASSICAL_MODELS, build_baseline, count_params
 from backend.ml.quantum.data import stratified_subsample
-from backend.ml.quantum.hybrid_qnn import HybridQNNClassifier
+from backend.ml.quantum.hybrid_qnn import HybridQNNClassifier, ResidualQNNClassifier
 from backend.ml.quantum.preprocess import make_preprocessor, select_features
 from backend.ml.quantum.qkernel import QuantumKernelSVM
-from backend.ml.quantum.vqc import VQCClassifier
+from backend.ml.quantum.vqc import TrigTwinClassifier, VQCClassifier
 
 QUANTUM_MODELS = ["qsvm", "vqc", "hybrid_qnn"]
 ALL_MODELS = CLASSICAL_MODELS + QUANTUM_MODELS
@@ -55,12 +55,21 @@ def feature_selection_grid(name: str, seed: int = SEED) -> list[dict]:
     return grid
 
 
-EXPERIMENT_MODELS = ["qsvm_c", *VQC_VARIANTS, "hybrid_classical", *(m + FS_SUFFIX for m in ALL_MODELS)]
+# D4 controls (master prompt v2): classical twin of the re-uploading VQC, residual heads, and the untuned QSVM.
+TUNING_GRIDS.update({"vqc_twin": TUNING_GRIDS["vqc"], "residual_qnn": TUNING_GRIDS["vqc"],
+                     "residual_classical": TUNING_GRIDS["vqc"],
+                     "qsvm_fixed": {"model__C": [1.0]}})  # untuned control (s = 1, C = 1): one configuration
+UNTUNED_CONTROLS = ["qsvm_fixed"]
+CONTROL_MODELS = ["mlp_matched", "vqc_twin", "residual_qnn", "residual_classical", "qsvm_fixed"]
+EXPERIMENT_MODELS = ["qsvm_c", *VQC_VARIANTS, "hybrid_classical", *CONTROL_MODELS,
+                     *(m + FS_SUFFIX for m in ALL_MODELS)]
+QUANTUM_NAMES = {"qsvm", "qsvm_c", "qsvm_fixed", "vqc", *VQC_VARIANTS}
+HYBRID_NAMES = {"hybrid_qnn", "residual_qnn"}
 
 
 def build_model(name: str, n_qubits: int, seed: int = SEED, epochs: int = 40, n_layers: int = 2):
     name = name.removesuffix(FS_SUFFIX)
-    if name in ("qsvm", "qsvm_c"):
+    if name in ("qsvm", "qsvm_c", "qsvm_fixed"):
         return QuantumKernelSVM(n_qubits=n_qubits, seed=seed)
     if name == "vqc" or name in VQC_VARIANTS:
         options = {"n_layers": n_layers, **VQC_VARIANTS.get(name, {})}
@@ -68,14 +77,19 @@ def build_model(name: str, n_qubits: int, seed: int = SEED, epochs: int = 40, n_
     if name in ("hybrid_qnn", "hybrid_classical"):
         return HybridQNNClassifier(n_qubits=n_qubits, n_layers=n_layers, epochs=epochs, seed=seed,
                                    quantum=name == "hybrid_qnn")
+    if name == "vqc_twin":
+        return TrigTwinClassifier(n_qubits=n_qubits, n_layers=n_layers, epochs=epochs, seed=seed)
+    if name in ("residual_qnn", "residual_classical"):
+        return ResidualQNNClassifier(n_qubits=n_qubits, n_layers=n_layers, epochs=epochs, seed=seed,
+                                     quantum=name == "residual_qnn")
     return build_baseline(name, seed)
 
 
 def model_family(name: str) -> str:
     name = name.removesuffix(FS_SUFFIX)
-    if name.startswith(("qsvm", "vqc")):
+    if name in QUANTUM_NAMES:
         return "quantum"
-    if name == "hybrid_qnn":
+    if name in HYBRID_NAMES:
         return "hybrid"
     return "classical"
 
@@ -133,11 +147,51 @@ def reliability(y_true, y_score, n_bins: int = 10) -> tuple[float, list[dict]]:
     return float(ece), points
 
 
+def calibration_slope_intercept(y_true, y_score, eps=1e-6) -> dict:
+    """Logistic recalibration (Van Calster et al. 2019): slope from logit(y) ~ a + b * logit(p); calibration-in-the-
+    large intercept from logit(y) ~ a + offset(logit(p)). Ideal: slope 1, intercept 0. Newton-Raphson, no penalty."""
+    y = np.asarray(y_true, dtype=float)
+    lp = np.log(np.clip(y_score, eps, 1 - eps) / (1 - np.clip(y_score, eps, 1 - eps)))
+
+    def newton(X, offset):
+        beta = np.zeros(X.shape[1])
+        for _ in range(50):
+            p = 1 / (1 + np.exp(-(X @ beta + offset)))
+            W = p * (1 - p) + 1e-12
+            step = np.linalg.solve(X.T @ (X * W[:, None]) + 1e-9 * np.eye(X.shape[1]), X.T @ (y - p))
+            beta += step
+            if np.max(np.abs(step)) < 1e-8:
+                break
+        return beta
+
+    slope = newton(np.column_stack([np.ones_like(lp), lp]), 0.0)[1]
+    intercept = newton(np.ones((len(lp), 1)), lp)[0]
+    return {"slope": float(slope), "intercept": float(intercept)}
+
+
+DCA_THRESHOLDS = tuple(round(t, 2) for t in np.arange(0.05, 0.51, 0.05))
+
+
+def decision_curve(y_true, y_score, thresholds=DCA_THRESHOLDS) -> list[dict]:
+    """Net benefit = TP/n - FP/n * t/(1-t) for the model, treat-all and treat-none (= 0) at each threshold t."""
+    y = np.asarray(y_true)
+    n, prev = len(y), float(np.mean(y))
+    out = []
+    for t in thresholds:
+        pred = np.asarray(y_score) >= t
+        tp, fp = float(np.sum(pred & (y == 1))), float(np.sum(pred & (y == 0)))
+        out.append({"threshold": t, "model": tp / n - fp / n * t / (1 - t),
+                    "treat_all": prev - (1 - prev) * t / (1 - t)})
+    return out
+
+
 def calibration_summary(y_true, y_score) -> dict:
     """Pooled out-of-fold calibration and decision metrics (per-fold ECE at ~60 rows is too noisy)."""
     ece, points = reliability(y_true, y_score)
     return {"brier": float(brier_score_loss(y_true, y_score)), "ece": ece, "reliability": points,
-            "sens_at_spec": {f"{s:.2f}": sensitivity_at_specificity(y_true, y_score, s) for s in SPECIFICITY_TARGETS}}
+            **calibration_slope_intercept(y_true, y_score),
+            "sens_at_spec": {f"{s:.2f}": sensitivity_at_specificity(y_true, y_score, s) for s in SPECIFICITY_TARGETS},
+            "decision_curve": decision_curve(y_true, y_score)}
 
 
 def tune(name, X_train, y_train, n_qubits, seed=SEED, method="mutual_info", epochs=40):

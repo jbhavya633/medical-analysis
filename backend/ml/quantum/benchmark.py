@@ -49,12 +49,15 @@ logger = logging.getLogger("qml.benchmark")
 # Reference categorical palette (dataviz skill), fixed slot per model: classical 1-4, quantum 5-7.
 MODEL_COLORS = {
     "logreg": "#2a78d6", "svm_rbf": "#eb6834", "random_forest": "#1baf7a", "mlp": "#eda100",
-    "qsvm": "#e87ba4", "vqc": "#008300", "hybrid_qnn": "#4a3aa7",
+    "qsvm": "#e87ba4", "vqc": "#008300", "hybrid_qnn": "#4a3aa7", "hgb": "#7d4f2a",
 }
 MODEL_LABELS = {
     "logreg": "Logistic regression", "svm_rbf": "SVM (RBF)", "random_forest": "Random forest", "mlp": "MLP",
-    "qsvm": "Quantum-kernel SVM", "vqc": "VQC", "hybrid_qnn": "Hybrid QNN",
-    # experiment-only variants (cv-only runs; no plots)
+    "qsvm": "Quantum-kernel SVM", "vqc": "VQC", "hybrid_qnn": "Hybrid QNN", "hgb": "Gradient boosting (HGB)",
+    # controls and experiment-only variants (cv-only runs; no plots)
+    "mlp_matched": "MLP, parameter-matched (41)", "vqc_twin": "Classical trig twin of re-uploading VQC",
+    "residual_qnn": "Residual head [x, quantum block]", "residual_classical": "Residual head [x, tanh block]",
+    "qsvm_fixed": "QSVM, untuned (s = 1, C = 1)",
     "qsvm_c": "QSVM, C-tuned control (s = 1)",
     "vqc_3layer": "VQC, 3 layers (parameter-matched control)", "vqc_scale": "VQC + trainable input scaling",
     "vqc_reupload_scale": "VQC + data re-uploading (scaled)", "vqc_allz": "VQC, all-qubit readout",

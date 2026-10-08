@@ -68,7 +68,49 @@ def test_sensitivity_at_specificity():
 
 def test_calibration_summary_keys():
     c = calibration_summary(Y, np.clip(0.5 + 0.4 * (Y - 0.5) + 0.05, 0, 1))
-    assert set(c) == {"brier", "ece", "reliability", "sens_at_spec"} and set(c["sens_at_spec"]) == {"0.90", "0.95"}
+    assert set(c) == {"brier", "ece", "reliability", "sens_at_spec", "slope", "intercept", "decision_curve"}
+    assert set(c["sens_at_spec"]) == {"0.90", "0.95"}
+
+
+def test_calibration_slope_intercept_recovers_known_miscalibration():
+    from backend.ml.quantum.evaluate import calibration_slope_intercept
+    r = np.random.default_rng(1)
+    lp = r.normal(0, 2, 4000)
+    y = (r.random(4000) < 1 / (1 + np.exp(-lp))).astype(int)
+    good = calibration_slope_intercept(y, 1 / (1 + np.exp(-lp)))
+    assert good["slope"] == pytest.approx(1, abs=0.1) and good["intercept"] == pytest.approx(0, abs=0.1)
+    over = calibration_slope_intercept(y, 1 / (1 + np.exp(-2 * lp)))  # over-confident -> slope ~0.5
+    assert over["slope"] == pytest.approx(0.5, abs=0.07)
+
+
+def test_decision_curve_hand_computed():
+    from backend.ml.quantum.evaluate import decision_curve
+    y = np.array([1, 1, 0, 0])
+    dc = decision_curve(y, np.array([0.9, 0.2, 0.6, 0.1]), thresholds=(0.5,))[0]
+    assert dc["model"] == pytest.approx(1 / 4 - 1 / 4 * 1.0)  # TP=1, FP=1, t/(1-t)=1
+    assert dc["treat_all"] == pytest.approx(0.5 - 0.5)
+
+
+def test_corrected_resampled_ttest():
+    from backend.ml.quantum.stats import corrected_resampled_ttest
+    a, b = np.array([0.9, 0.92, 0.91, 0.93, 0.9]), np.array([0.8, 0.81, 0.79, 0.82, 0.8])
+    r = corrected_resampled_ttest(a, b, n_train=200, n_test=50)
+    plain = corrected_resampled_ttest(a, b, n_train=10 ** 9, n_test=1)  # correction ~ 0: plain paired t
+    assert r["p"] > plain["p"] and r["df"] == 4 and r["ci95"][0] < r["delta"] < r["ci95"][1]
+    assert corrected_resampled_ttest(a, a, 200, 50)["p"] == 1.0
+
+
+def test_friedman_nemenyi_and_wilcoxon_pairs():
+    from backend.ml.quantum.stats import friedman_nemenyi, wilcoxon_holm_pairs, win_tie_loss
+    ds = [f"d{i}" for i in range(8)]
+    scores = {"good": {d: 0.9 + 0.01 * i for i, d in enumerate(ds)}, "mid": {d: 0.85 for d in ds},
+              "bad": {d: 0.6 for d in ds}}
+    f = friedman_nemenyi(scores)
+    assert f["mean_rank"]["good"] == 1 and f["mean_rank"]["bad"] == 3 and f["friedman_p"] < 0.01 and f["cd"] > 0
+    rows = wilcoxon_holm_pairs(scores, [("good", "bad"), ("mid", "mid")])
+    assert rows[0]["wins_a"] == 8 and rows[0]["significant"] and rows[1]["p"] == 1.0
+    assert win_tie_loss({"x": {"significant": True, "delta": 0.1}, "y": {"significant": False, "delta": -1},
+                         "z": {"significant": True, "delta": -0.2}}) == {"win": 1, "tie": 1, "loss": 1}
 
 
 def test_compare_includes_secondary_metrics():
@@ -80,9 +122,10 @@ def test_compare_includes_secondary_metrics():
 
 def test_every_model_gets_the_same_tuning_budget():
     from sklearn.model_selection import ParameterGrid
-    from backend.ml.quantum.evaluate import ALL_MODELS, EXPERIMENT_MODELS, TUNING_GRIDS
+    from backend.ml.quantum.evaluate import ALL_MODELS, EXPERIMENT_MODELS, TUNING_GRIDS, UNTUNED_CONTROLS
     assert set(TUNING_GRIDS) == set(ALL_MODELS + EXPERIMENT_MODELS)
-    assert {len(ParameterGrid(g)) for g in TUNING_GRIDS.values()} == {6}
+    assert {len(ParameterGrid(g)) for m, g in TUNING_GRIDS.items() if m not in UNTUNED_CONTROLS} == {6}
+    assert all(len(ParameterGrid(TUNING_GRIDS[m])) == 1 for m in UNTUNED_CONTROLS)
 
 
 def _summary(path, y, scores):

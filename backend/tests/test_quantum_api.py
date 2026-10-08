@@ -70,7 +70,7 @@ def test_benchmark_missing_is_404(client, tmp_path, monkeypatch):
 
 def test_catalog_endpoints(client):
     assert {d["id"] for d in client.get("/api/qml/datasets").json()} == {"breast_cancer", "heart"}
-    assert len(client.get("/api/qml/models").json()) == 7
+    assert len(client.get("/api/qml/models").json()) == 8
     assert client.get("/api/qml/health").json()["benchmark_available"] is True
 
 

@@ -190,6 +190,26 @@ def test_entanglement_ablation_removes_cnots():
     assert "CNOT" not in gates(make_qnode(NQ, 2, True, entangle=False))
 
 
+@pytest.mark.parametrize("name,params,family", [("vqc_twin", 2 * NQ + 4 * NQ + 1, "classical"),
+                                                ("residual_qnn", 2 * NQ * 2 + 2 * NQ + 1, "hybrid"),
+                                                ("residual_classical", NQ * 4 + 4 + NQ + 4 + 1, "classical")])
+def test_d4_controls(small, name, params, family):
+    _, y, _, _, A = small
+    m = build_model(name, NQ, epochs=2).fit(A, y)
+    assert m.n_params_ == params and model_family(name) == family
+    assert m.predict_proba(A).shape == (len(y), 2)
+    assert (getattr(m, "circuit_depth_", None) is not None) == (family == "hybrid")
+
+
+def test_hgb_and_matched_mlp(small):
+    _, y, _, _, A = small
+    for name in ("hgb", "mlp_matched"):
+        m = build_model(name, NQ).fit(A, y)
+        assert count_params(m) > 0
+    assert count_params(build_model("mlp_matched", 6).fit(np.random.default_rng(0).random((30, 6)),
+                                                         np.arange(30) % 2)) == 6 * 5 + 5 + 5 + 1
+
+
 def test_hybrid_classical_ablation(small):
     _, y, _, _, A = small
     m = build_model("hybrid_classical", NQ, epochs=2).fit(A, y)
