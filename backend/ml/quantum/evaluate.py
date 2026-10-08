@@ -57,7 +57,8 @@ def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, met
     score = model.predict_proba(A_val)[:, 1]
     infer_ms = (time.perf_counter() - t0) * 1000 / len(A_val)
     pred = (score >= 0.5).astype(int)
-    train_acc = float(accuracy_score(y_train, model.predict(A_train)))
+    train_pred = (model.predict_proba(A_train)[:, 1] >= 0.5).astype(int)  # same rule as validation
+    train_acc = float(accuracy_score(y_train, train_pred))
     out = binary_metrics(y_val, pred, score)
     out.update(train_time_s=train_time, infer_ms_per_sample=infer_ms, train_accuracy=train_acc,
                gen_gap=train_acc - out["accuracy"])

@@ -126,3 +126,24 @@ def test_request_size_limit(client):
     r = client.post("/api/qml/predict", content=b"{}", headers={"Content-Length": str(50 * 1024 * 1024),
                                                                 "Content-Type": "application/json"})
     assert r.status_code == 413
+
+
+def test_body_without_content_length_rejected(client):
+    def chunks():
+        yield b'{"model_id": "breast_cancer_qsvm", "features": []}'
+
+    r = client.post("/api/qml/predict", content=chunks(), headers={"Content-Type": "application/json"})
+    assert r.status_code == 411
+
+
+def test_artifact_cache_reloads_after_overwrite(client, results_dir):
+    import os
+    first = client.get("/api/qml/models/breast_cancer_logreg").json()
+    path = results_dir / "models" / "breast_cancer_logreg.joblib"
+    art = service.joblib.load(path)
+    art["holdout_metrics"] = {**art["holdout_metrics"], "accuracy": -1.0}
+    service.joblib.dump(art, path)
+    st = path.stat()
+    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 10_000_000))
+    assert client.get("/api/qml/models/breast_cancer_logreg").json()["holdout_metrics"]["accuracy"] == -1.0
+    assert first["holdout_metrics"]["accuracy"] != -1.0

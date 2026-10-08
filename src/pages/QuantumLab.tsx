@@ -129,7 +129,8 @@ export function QuantumLab() {
           </div>
           <ImportanceChart models={ds.models} model={model} />
           <PredictionPanel
-            modelId={job?.status === 'done' && job.model_id ? job.model_id : `${dataset}_${model}`}
+            modelId={job?.status === 'done' && job.model_id && job.dataset === dataset && job.model === model
+              ? job.model_id : `${dataset}_${model}`}
             available={benchmark.data.trained_models}
           />
         </>

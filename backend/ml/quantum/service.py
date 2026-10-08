@@ -115,7 +115,7 @@ def get_job(job_id: str) -> dict:
 
 
 @lru_cache(maxsize=32)
-def _load_artifact(model_id: str) -> dict:
+def _load_artifact(model_id: str, mtime_ns: int) -> dict:  # mtime in the key: re-trained files reload
     return joblib.load(RESULTS_DIR / "models" / f"{model_id}.joblib")
 
 
@@ -156,6 +156,7 @@ def predict(model_id: str, features: dict[str, float | None] | list[float | None
 
 
 def _artifact(model_id: str) -> dict:
-    if not MODEL_ID_RE.match(model_id) or not (RESULTS_DIR / "models" / f"{model_id}.joblib").is_file():
+    path = RESULTS_DIR / "models" / f"{model_id}.joblib"
+    if not MODEL_ID_RE.match(model_id) or not path.is_file():
         raise NotFoundError(f"Unknown model_id '{model_id}'")
-    return _load_artifact(model_id)
+    return _load_artifact(model_id, path.stat().st_mtime_ns)

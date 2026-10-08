@@ -51,6 +51,8 @@ app.include_router(qml_router)
 async def request_guard(request: Request, call_next):
     request.state.request_id = uuid.uuid4().hex[:12]
     length = request.headers.get("content-length")
+    if request.method in ("POST", "PUT", "PATCH") and not (length and length.isdigit()):
+        return JSONResponse({"detail": "Content-Length required", "request_id": request.state.request_id}, 411)
     if length and length.isdigit() and int(length) > MAX_REQUEST_BYTES:
         return JSONResponse({"detail": "Request body too large", "request_id": request.state.request_id}, 413)
     response = await call_next(request)

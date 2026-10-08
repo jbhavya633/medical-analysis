@@ -234,12 +234,12 @@ export function Layout() {
               </div>
             </div>
           </div>
-          <div
+          {!location.pathname.startsWith('/quantum-lab') && <div
             role="note"
             className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
           >
             Demo data: patients, studies and results shown here are synthetic and are not real patients. Not a diagnostic tool.
-          </div>
+          </div>}
           <Outlet />
         </main>
       </div>
