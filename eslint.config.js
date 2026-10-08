@@ -1,40 +1,31 @@
-﻿// eslint.config.js
-const js = require('@eslint/js');
-const globals = require('globals');
-const typescriptParser = require('@typescript-eslint/parser');
-const typescriptPlugin = require('@typescript-eslint/eslint-plugin');
-const reactPlugin = require('eslint-plugin-react');
-const reactHooksPlugin = require('eslint-plugin-react-hooks');
+// eslint.config.js
+import js from '@eslint/js'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
+import reactPlugin from 'eslint-plugin-react'
+import reactHooksPlugin from 'eslint-plugin-react-hooks'
 
-module.exports = [
+export default tseslint.config(
+  { ignores: ['dist', 'node_modules', 'temp_git', 'tmpgit', 'backend'] },
   js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
-      parser: typescriptParser,
-      parserOptions: {
-        ecmaVersion: 2020,
-        sourceType: 'module',
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-      globals: {
-        ...globals.browser,
-        ...globals.es2021,
-        Node: 'readonly',
-      },
+      ecmaVersion: 2020,
+      sourceType: 'module',
+      parserOptions: { ecmaFeatures: { jsx: true } },
+      globals: { ...globals.browser, ...globals.es2021 },
     },
+    settings: { react: { version: 'detect' } },
     plugins: {
-      '@typescript-eslint': typescriptPlugin,
       react: reactPlugin,
       'react-hooks': reactHooksPlugin,
     },
     rules: {
       ...reactPlugin.configs.recommended.rules,
+      ...reactPlugin.configs['jsx-runtime'].rules,
       ...reactHooksPlugin.configs.recommended.rules,
-      ...typescriptPlugin.configs.recommended.rules,
-      // Custom rules can be added here
     },
   },
-};
+)

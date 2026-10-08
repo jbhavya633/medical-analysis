@@ -79,7 +79,7 @@ interface TabsListProps {
 }
 
 export function TabsList({ children, className }: TabsListProps) {
-  const { value, onValueChange, variant, orientation } = useTabsContext()
+  const { variant, orientation } = useTabsContext()
 
   const baseClasses = orientation === 'horizontal'
     ? 'flex gap-1'
@@ -98,17 +98,7 @@ export function TabsList({ children, className }: TabsListProps) {
       aria-orientation={orientation}
       className={cn(baseClasses, variantClasses[variant], className)}
     >
-      {React.Children.map(children, child => {
-        if (React.isValidElement(child) && child.type === TabTrigger) {
-          return React.cloneElement(child, {
-            value,
-            onValueChange,
-            variant,
-            orientation
-          })
-        }
-        return child
-      })}
+      {children}
     </div>
   )
 }
