@@ -28,12 +28,16 @@ def hardware_efficient_ansatz(weights, n_qubits: int, entangle: bool = True):
                 qml.CNOT(wires=[i, (i + 1) % n_qubits])
 
 
-def make_qnode(n_qubits: int, n_layers: int, all_wires: bool, reupload: bool = False, entangle: bool = True):
+def make_qnode(n_qubits: int, n_layers: int, all_wires: bool, reupload: bool = False, entangle: bool = True,
+               device: str = "default.qubit", shots: int | None = None):
     """reupload=True: inputs hold one angle vector per layer (n_layers * n_qubits values) and each layer is
-    preceded by its own RY encoding (data re-uploading). entangle=False drops the CNOT ring (ablation)."""
-    dev = qml.device("default.qubit", wires=n_qubits)
+    preceded by its own RY encoding (data re-uploading). entangle=False drops the CNOT ring (ablation).
+    device / shots select the simulator (docs/SIMULATOR_PLAN.md): finite shots need parameter-shift gradients,
+    lightning.qubit uses adjoint, the other PennyLane simulators backprop."""
+    dev = qml.device(device, wires=n_qubits, seed=SEED) if shots else qml.device(device, wires=n_qubits)
+    diff_method = "parameter-shift" if shots else "adjoint" if device == "lightning.qubit" else "backprop"
 
-    @qml.qnode(dev, interface="torch", diff_method="backprop")
+    @qml.qnode(dev, interface="torch", diff_method=diff_method)
     def circuit(inputs, weights):
         if reupload:
             for layer in range(n_layers):
@@ -46,7 +50,7 @@ def make_qnode(n_qubits: int, n_layers: int, all_wires: bool, reupload: bool = F
             return [qml.expval(qml.PauliZ(i)) for i in range(n_qubits)]
         return qml.expval(qml.PauliZ(0))
 
-    return circuit
+    return qml.set_shots(circuit, shots) if shots else circuit
 
 
 def fit_torch(module, X, y, epochs, lr, batch_size, seed):
@@ -94,8 +98,9 @@ class TorchQuantumClassifier(ClassifierMixin, BaseEstimator):
             self.circuit_depth_ = circuit_depth(qnode, torch.tensor(self._circuit_inputs(X[0])), weights)
         return self
 
-    def _qnode(self):
-        return make_qnode(self.n_qubits, self.n_layers, all_wires=False)
+    def _qnode(self, **sim):
+        """The model's circuit; sim (device, shots) rebuilds it on another simulator with the same structure."""
+        return make_qnode(self.n_qubits, self.n_layers, all_wires=False, **sim)
 
     def _circuit_inputs(self, x):
         return x
@@ -179,9 +184,9 @@ class VQCClassifier(TorchQuantumClassifier):
             raise ValueError(f"input_scaling must be one of {INPUT_SCALINGS}, readout one of {READOUTS}")
         return _VQCModule(self.n_qubits, self.n_layers, self.input_scaling, self.readout, self.entangle)
 
-    def _qnode(self):
+    def _qnode(self, **sim):
         return make_qnode(self.n_qubits, self.n_layers, all_wires=self.readout == "allz",
-                          reupload=self.input_scaling == "reupload", entangle=self.entangle)
+                          reupload=self.input_scaling == "reupload", entangle=self.entangle, **sim)
 
     def _circuit_inputs(self, x):
         return np.tile(x, self.n_layers) if self.input_scaling == "reupload" else x

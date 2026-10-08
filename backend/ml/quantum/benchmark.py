@@ -60,6 +60,7 @@ MODEL_LABELS = {
     "vqc_reupload_scale": "VQC + data re-uploading (scaled)", "vqc_allz": "VQC, all-qubit readout",
     "vqc_allz_noent": "VQC, all-qubit readout, no CNOTs", "hybrid_classical": "Hybrid, quantum layer -> Linear+tanh",
 }
+MODEL_LABELS.update({m + "_fs": f"{MODEL_LABELS[m]}, feature-selection sweep" for m in ALL_MODELS})
 
 
 def run_dataset(name, n_qubits, seed, folds, max_train, epochs, models, tuned=False, cv_only=False):
@@ -309,7 +310,8 @@ def main(argv=None):
                          "models": {m: {key: r[key] for key in ("family", "metrics", "roc", "learning_curve",
                                                                   "n_qubits", "circuit_depth", "n_params",
                                                                   "holdout", "explain", "oof", "vs_reference",
-                                                                  "calibration", "tuning", "folds")
+                                                                  "calibration", "tuning", "folds",
+                                                                  "feature_stability_jaccard")
                                         if key in r}
                                     for m, r in v["models"].items()}}
                      for k, v in all_results.items()},

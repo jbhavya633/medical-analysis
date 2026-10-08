@@ -43,5 +43,5 @@ class HybridQNNClassifier(TorchQuantumClassifier):
     def _build(self):
         return _HybridModule(self.n_qubits, self.n_qubits, self.n_layers, self.quantum)
 
-    def _qnode(self):
-        return make_qnode(self.n_qubits, self.n_layers, all_wires=True) if self.quantum else None
+    def _qnode(self, **sim):
+        return make_qnode(self.n_qubits, self.n_layers, all_wires=True, **sim) if self.quantum else None

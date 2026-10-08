@@ -11,7 +11,7 @@ from backend.ml.quantum import SEED
 from backend.ml.quantum.baselines import CLASSICAL_GRIDS, CLASSICAL_MODELS, build_baseline, count_params
 from backend.ml.quantum.data import stratified_subsample
 from backend.ml.quantum.hybrid_qnn import HybridQNNClassifier
-from backend.ml.quantum.preprocess import make_preprocessor
+from backend.ml.quantum.preprocess import make_preprocessor, select_features
 from backend.ml.quantum.qkernel import QuantumKernelSVM
 from backend.ml.quantum.vqc import VQCClassifier
 
@@ -37,12 +37,29 @@ VQC_VARIANTS = {
     "vqc_allz": {"readout": "allz"},                  # every qubit reaches the output, so the next is a fair ablation
     "vqc_allz_noent": {"readout": "allz", "entangle": False},
 }
-EXPERIMENT_MODELS = ["qsvm_c", *VQC_VARIANTS, "hybrid_classical"]
 TUNING_GRIDS.update({m: TUNING_GRIDS["vqc"] for m in VQC_VARIANTS})
 TUNING_GRIDS["hybrid_classical"] = TUNING_GRIDS["hybrid_qnn"]
+FS_SUFFIX = "_fs"
+
+
+def feature_selection_grid(name: str, seed: int = SEED) -> list[dict]:
+    """E11: k in {4, 6, 8} x {mutual information, PCA} as the 6 inner configurations, model hyperparameters at
+    their defaults. Quantum models need one qubit per feature, so n_qubits moves with k."""
+    grid = []
+    for k in (4, 6, 8):
+        for method in ("mutual_info", "pca"):
+            config = {"pre__select": [select_features(method, k, seed)]}
+            if model_family(name) != "classical":
+                config["model__n_qubits"] = [k]
+            grid.append(config)
+    return grid
+
+
+EXPERIMENT_MODELS = ["qsvm_c", *VQC_VARIANTS, "hybrid_classical", *(m + FS_SUFFIX for m in ALL_MODELS)]
 
 
 def build_model(name: str, n_qubits: int, seed: int = SEED, epochs: int = 40, n_layers: int = 2):
+    name = name.removesuffix(FS_SUFFIX)
     if name in ("qsvm", "qsvm_c"):
         return QuantumKernelSVM(n_qubits=n_qubits, seed=seed)
     if name == "vqc" or name in VQC_VARIANTS:
@@ -55,11 +72,30 @@ def build_model(name: str, n_qubits: int, seed: int = SEED, epochs: int = 40, n_
 
 
 def model_family(name: str) -> str:
+    name = name.removesuffix(FS_SUFFIX)
     if name.startswith(("qsvm", "vqc")):
         return "quantum"
     if name == "hybrid_qnn":
         return "hybrid"
     return "classical"
+
+
+TUNING_GRIDS.update({m + FS_SUFFIX: feature_selection_grid(m) for m in ALL_MODELS})
+
+
+def describe(value):
+    """JSON-friendly description of a grid value (selector objects become e.g. "mutual_info(k=6)")."""
+    if hasattr(value, "n_components"):
+        return f"pca(k={value.n_components})"
+    if hasattr(value, "k") and hasattr(value, "score_func"):
+        return f"mutual_info(k={value.k})"
+    return value
+
+
+def describe_grid(grid):
+    grids = grid if isinstance(grid, list) else [grid]
+    out = [{k: [describe(v) for v in vs] for k, vs in g.items()} for g in grids]
+    return out if isinstance(grid, list) else out[0]
 
 
 def binary_metrics(y_true, y_pred, y_score) -> dict:
@@ -125,7 +161,7 @@ def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, met
     if tuned:
         best, search = tune(name, X_train, y_train, n_qubits, seed, method, epochs)
         pre, model = best.named_steps["pre"], best.named_steps["model"]
-        tuning = {"best_params": {k.removeprefix("model__"): v for k, v in search.best_params_.items()},
+        tuning = {"best_params": {k.split("__")[-1]: describe(v) for k, v in search.best_params_.items()},
                   "inner_auc": float(search.best_score_), "n_configs": len(ParameterGrid(TUNING_GRIDS[name]))}
         A_train = pre.transform(X_train)
     else:
@@ -147,7 +183,16 @@ def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, met
                gen_gap=train_acc - out["accuracy"], **tuning)
     if hasattr(model, "kernel_spectrum_"):
         out["kernel_spectrum"] = model.kernel_spectrum_
+    selector = pre.named_steps["select"]
+    if hasattr(selector, "get_support"):  # mutual-information selection: which raw features were kept
+        out["selected_idx"] = selector.get_support(indices=True).tolist()
     return out, score, pre, model
+
+
+def jaccard_stability(sets: list[list[int]]) -> float | None:
+    """Mean pairwise Jaccard index of the feature sets selected in different folds (1 = always the same)."""
+    pairs = [(set(a), set(b)) for i, a in enumerate(sets) for b in sets[i + 1:]]
+    return float(np.mean([len(a & b) / len(a | b) for a, b in pairs])) if pairs else None
 
 
 def cross_validate(name, X, y, n_qubits=6, n_splits=5, seed=SEED, max_train=200, method="mutual_info", epochs=40,
@@ -174,12 +219,16 @@ def cross_validate(name, X, y, n_qubits=6, n_splits=5, seed=SEED, max_train=200,
     tuning = None
     if tuned:
         inner = float(np.mean([f["inner_auc"] for f in folds]))
-        tuning = {"n_configs": folds[0]["n_configs"], "inner_folds": INNER_FOLDS, "grid": TUNING_GRIDS[name],
+        tuning = {"n_configs": folds[0]["n_configs"], "inner_folds": INNER_FOLDS,
+                  "grid": describe_grid(TUNING_GRIDS[name]),
                   "chosen": [f["best_params"] for f in folds], "inner_auc_mean": inner,
                   # best inner-CV AUC overstates what the chosen setting achieves on unseen rows (Varma & Simon)
                   "optimism": inner - summary["auc"]["mean"]}
+    mi_sets = [f["selected_idx"] for f in folds if "selected_idx" in f]
+    feature_stability = jaccard_stability(mi_sets) if len(mi_sets) == len(folds) else None
     return {
         "tuning": tuning,
+        "feature_stability_jaccard": feature_stability,
         "model": name,
         "family": model_family(name),
         "metrics": summary,
