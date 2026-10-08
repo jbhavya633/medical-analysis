@@ -3,14 +3,14 @@
 Resume rule: after any restart or context compaction, re-read docs/MASTER_PROMPT_V2.md, this file, docs/OPTIMIZATION_PLAN.md and docs/PREREGISTRATION.md before doing anything. Decision log: `DECISIONS.md` at the repo root (the file CLAUDE.md names; the prompt's "docs/DECISIONS.md" refers to it, so there is one log, not two).
 
 ## Current phase
-P0 Housekeeping (done) -> P1 Study
+P4 Multi-dataset benchmark: development run in progress (P0-P3 done)
 
 ## Definition of done (status / evidence)
 | # | Item | Status | Evidence |
 |---|---|---|---|
 | D1 | `v1-baseline` tag + scorecard vs HEAD | tag done; scorecard pending | `git tag` -> v1-baseline at 0d9b07c; docs/SCORECARD.md (P10) |
-| D2 | >= 12 datasets accepted and benchmarked | pending | backend/ml/quantum/registry.py, results/multi/ |
-| D3 | PREREGISTRATION committed before multi-dataset results | pending | docs/PREREGISTRATION.md commit hash |
+| D2 | >= 12 datasets accepted and benchmarked | accepted: 13 + sanity; benchmark running | backend/ml/quantum/registry.py, results/multi/ |
+| D3 | PREREGISTRATION committed before multi-dataset results | done (41fdfc9) | docs/PREREGISTRATION.md commit hash |
 | D4 | All D4 models tuned by nested CV, equal budget | partial (7 models + E-variants, single CV) | evaluate.TUNING_GRIDS |
 | D5 | Multi-dataset statistics (corrected t, Friedman, Wilcoxon-Holm, CD, W/T/L, effect sizes) | pending | |
 | D6 | Data-complexity analysis | pending | |
@@ -51,3 +51,10 @@ P0 Housekeeping (done) -> P1 Study
 
 ## Log
 - P0: committed dev-round work (0264a3f..7ebabfc), new docs (6acc2bd), tagged v1-baseline at 0d9b07c.
+
+## Resume point (2026-10-08, ~22:10)
+- Commits: P1 cf83ace, P2 41fdfc9, P3 d29a97e + 65849b7, P4 runner 1f4570f. Gates green at 1f4570f (pytest 96.4%, type-check, build, vitest).
+- RUNNING: development run (4 dev datasets x 19 models x 3 repeats x 5 folds), launched detached (PID 21664). Log: backend/ml/quantum/results/multi/run.log; checkpoints: results/multi/checkpoints/. Relaunch the same command to resume:
+  python -m backend.ml.quantum.multibench run --split development --models logreg,svm_rbf,random_forest,mlp,hgb,mlp_matched,qsvm,qsvm_fixed,vqc,vqc_3layer,vqc_scale,vqc_reupload_scale,vqc_allz,vqc_allz_noent,vqc_twin,hybrid_qnn,hybrid_classical,residual_qnn,residual_classical --repeats 3 --workers 6
+- NEXT: aggregate dev (multibench aggregate --split development), apply the VQC-variant selection rule (PREREGISTRATION sec. 6), run confirmation once, then P5-P10.
+- Untracked: results/experiments/ (E0/E3/E6 dev-round outputs; e0/e6 summary.md have mojibake from the earlier encoding bug - regenerate before committing).
