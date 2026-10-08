@@ -78,6 +78,27 @@ def test_compare_includes_secondary_metrics():
     assert out["a"]["sens_at_spec90"]["delta"] < 0
 
 
+def test_every_model_gets_the_same_tuning_budget():
+    from sklearn.model_selection import ParameterGrid
+    from backend.ml.quantum.evaluate import ALL_MODELS, TUNING_GRIDS
+    assert {len(ParameterGrid(TUNING_GRIDS[m])) for m in ALL_MODELS} == {6}
+
+
+def test_nested_cv_tunes_inside_training_folds(monkeypatch):
+    import backend.ml.quantum.evaluate as ev
+    X, y, _ = load_dataset("breast_cancer")
+    X, y = stratified_subsample(X, y, 90, seed=42)
+    r = cross_validate("logreg", X, y, n_qubits=4, n_splits=3, max_train=50, tuned=True)
+    t = r["tuning"]
+    assert t["n_configs"] == 6 and len(t["chosen"]) == 3 and set(t["chosen"][0]) == {"C"}
+    assert t["optimism"] == pytest.approx(t["inner_auc_mean"] - r["metrics"]["auc"]["mean"])
+    assert cross_validate("logreg", X, y, n_qubits=4, n_splits=3, max_train=50)["tuning"] is None
+    # quantum models go through the same harness (small grid here to keep the test fast)
+    monkeypatch.setitem(ev.TUNING_GRIDS, "vqc", {"model__lr": [0.05, 0.1], "model__epochs": [2]})
+    q = cross_validate("vqc", X, y, n_qubits=4, n_splits=2, max_train=40, tuned=True)
+    assert q["tuning"]["n_configs"] == 2 and {"lr", "epochs"} == set(q["tuning"]["chosen"][0])
+
+
 def test_cross_validate_scores_every_row_once():
     X, y, _ = load_dataset("breast_cancer")
     X, y = stratified_subsample(X, y, 90, seed=42)

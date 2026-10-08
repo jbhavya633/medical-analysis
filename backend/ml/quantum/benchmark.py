@@ -23,7 +23,15 @@ import numpy as np
 
 from backend.ml.quantum import SEED
 from backend.ml.quantum.data import DATASETS, DatasetUnavailableError, holdout_split, load_dataset, stratified_subsample
-from backend.ml.quantum.evaluate import ALL_MODELS, QUANTUM_MODELS, cross_validate, fit_and_score, learning_curve
+from backend.ml.quantum.evaluate import (
+    ALL_MODELS,
+    INNER_FOLDS,
+    QUANTUM_MODELS,
+    TUNING_GRIDS,
+    cross_validate,
+    fit_and_score,
+    learning_curve,
+)
 from backend.ml.quantum.explain import (
     feature_map_sensitivity,
     kernel_alignment,
@@ -49,14 +57,17 @@ MODEL_LABELS = {
 }
 
 
-def run_dataset(name, n_qubits, seed, folds, max_train, epochs, models):
+def run_dataset(name, n_qubits, seed, folds, max_train, epochs, models, tuned=False, cv_only=False):
+    """tuned: nested-CV tuning with an equal 6-configuration grid per model (outer folds and hold-out alike).
+    cv_only: experiment runs - skip the learning curve, the hold-out fit, explanations and saved models."""
     X, y, feature_names = load_dataset(name)
     logger.info("%s: %d samples, %d raw features, %.1f%% positive", name, len(y), X.shape[1], 100 * y.mean())
     results = {}
     for model in models:
         t0 = time.perf_counter()
-        cv = cross_validate(model, X, y, n_qubits, folds, seed, max_train, epochs=epochs)
-        cv["learning_curve"] = learning_curve(model, X, y, n_qubits, seed, max_train, epochs=epochs)
+        cv = cross_validate(model, X, y, n_qubits, folds, seed, max_train, epochs=epochs, tuned=tuned)
+        if not cv_only:  # learning curve stays untuned (default hyperparameters) to bound its cost
+            cv["learning_curve"] = learning_curve(model, X, y, n_qubits, seed, max_train, epochs=epochs)
         m = cv["metrics"]
         logger.info("%-14s acc %.3f±%.3f sens %.3f spec %.3f auc %.3f train %.2fs (%.0fs total)",
                     model, m["accuracy"]["mean"], m["accuracy"]["std"], m["sensitivity"]["mean"],
@@ -69,8 +80,13 @@ def run_dataset(name, n_qubits, seed, folds, max_train, epochs, models):
         {m: [f["auc"] for f in r["folds"]] for m, r in results.items()}, REFERENCE_MODEL, seed)
     for model, cmp in comparisons.items():
         results[model]["vs_reference"] = cmp
+    dataset = {"dataset": name, "info": DATASETS[name], "n_samples": int(len(y)), "n_raw_features": int(X.shape[1]),
+               "positive_rate": float(y.mean()), "feature_names": feature_names, "y": y.astype(int).tolist(),
+               "reference_model": REFERENCE_MODEL, "models": results}
+    if cv_only:
+        return dataset
 
-    # Held-out 20% split: fit once per model, save it, and explain it.
+    # Held-out 20% split: fit once per model (tuned on the hold-out training rows only), save it, and explain it.
     X_tr, X_te, y_tr, y_te = holdout_split(X, y, seed=seed)
     X_tr, y_tr = stratified_subsample(X_tr, y_tr, max_train, seed)
     model_dir = RESULTS_DIR / "models"
@@ -78,7 +94,8 @@ def run_dataset(name, n_qubits, seed, folds, max_train, epochs, models):
     rng = np.random.default_rng(seed)
     background_raw = X_tr[rng.choice(len(X_tr), size=min(20, len(X_tr)), replace=False)]
     for model in models:
-        holdout, _, pre, fitted = fit_and_score(model, X_tr, y_tr, X_te, y_te, n_qubits, seed, epochs=epochs)
+        holdout, _, pre, fitted = fit_and_score(model, X_tr, y_tr, X_te, y_te, n_qubits, seed, epochs=epochs,
+                                                tuned=tuned)
         selected = selected_feature_names(pre, feature_names)
         A_te = pre.transform(X_te)
         A_bg = pre.transform(background_raw)[:10]
@@ -99,9 +116,7 @@ def run_dataset(name, n_qubits, seed, folds, max_train, epochs, models):
             "selected_features": selected, "background_raw": background_raw,
             "holdout_metrics": holdout,
         }, model_dir / f"{name}_{model}.joblib")
-    return {"dataset": name, "info": DATASETS[name], "n_samples": int(len(y)), "n_raw_features": int(X.shape[1]),
-            "positive_rate": float(y.mean()), "feature_names": feature_names, "y": y.astype(int).tolist(),
-            "reference_model": REFERENCE_MODEL, "models": results}
+    return dataset
 
 
 def write_summary_md(all_results, config, path):
@@ -137,6 +152,15 @@ def write_summary_md(all_results, config, path):
                          f"{format_delta(name, (r.get('vs_reference') or {}).get('brier'))} | {c['ece']:.3f} | "
                          f"{c['sens_at_spec']['0.90']:.3f} | {c['sens_at_spec']['0.95']:.3f} |")
         lines += ["", "ΔBrier < 0 means better calibrated than logistic regression.", ""]
+        tuned = {n: r["tuning"] for n, r in ds["models"].items() if r.get("tuning")}
+        if tuned:
+            lines += ["Nested tuning (inner 3-fold CV on each outer training fold; 6 configurations per model):", "",
+                      "| Model | Chosen per outer fold | Mean inner AUC | Optimism (inner - outer AUC) |",
+                      "|---|---|---|---|"]
+            for n, t in tuned.items():
+                chosen = "; ".join(", ".join(f"{k}={v}" for k, v in c.items()) for c in t["chosen"])
+                lines.append(f"| {MODEL_LABELS[n]} | {chosen} | {t['inner_auc_mean']:.3f} | {t['optimism']:+.3f} |")
+            lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -231,28 +255,42 @@ def main(argv=None):
     parser.add_argument("--max-train", type=int, default=200)
     parser.add_argument("--epochs", type=int, default=40)
     parser.add_argument("--models", default=",".join(ALL_MODELS))
+    parser.add_argument("--tune", action="store_true", help="nested-CV tuning, equal 6-configuration grid per model")
+    parser.add_argument("--cv-only", action="store_true",
+                        help="experiment run: CV table only (no learning curve, hold-out models, plots)")
+    parser.add_argument("--results-dir", type=Path, default=None,
+                        help="write here instead of results/ (e.g. results/experiments/<name>)")
     args = parser.parse_args(argv)
+    unknown = [m for m in args.models.split(",") if m and m not in TUNING_GRIDS]
+    if unknown:
+        parser.error(f"unknown models: {unknown}")
 
+    global RESULTS_DIR
+    if args.results_dir is not None:
+        RESULTS_DIR = args.results_dir
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", force=True,
                         handlers=[logging.StreamHandler(), logging.FileHandler(RESULTS_DIR / "benchmark.log", mode="w", encoding="utf-8")])
     warnings.filterwarnings("ignore")
     logging.getLogger("shap").setLevel(logging.WARNING)
     models = [m for m in args.models.split(",") if m]
     config = {"seed": args.seed, "n_qubits": args.n_qubits, "folds": args.folds, "max_train": args.max_train,
               "epochs": args.epochs, "feature_selection": "mutual_info", "simulator": "default.qubit",
-              "models": models}
+              "models": models, "tuned": args.tune, "cv_only": args.cv_only,
+              "tuning": {"inner_folds": INNER_FOLDS, "configs_per_model": 6} if args.tune else None}
     started = time.perf_counter()
     all_results = {}
     for name in (DATASETS if args.dataset == "all" else [args.dataset]):
         try:
-            ds = run_dataset(name, args.n_qubits, args.seed, args.folds, args.max_train, args.epochs, models)
+            ds = run_dataset(name, args.n_qubits, args.seed, args.folds, args.max_train, args.epochs, models,
+                             tuned=args.tune, cv_only=args.cv_only)
         except DatasetUnavailableError as exc:
             logger.warning("%s: skipped (%s)", name, exc)
             continue
         all_results[name] = ds
         (RESULTS_DIR / f"benchmark_{name}.json").write_text(json.dumps(ds, indent=1), encoding="utf-8")
-        plot_dataset(ds, RESULTS_DIR)
+        if not args.cv_only:
+            plot_dataset(ds, RESULTS_DIR)
 
     meta = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -264,7 +302,7 @@ def main(argv=None):
                          "models": {m: {key: r[key] for key in ("family", "metrics", "roc", "learning_curve",
                                                                   "n_qubits", "circuit_depth", "n_params",
                                                                   "holdout", "explain", "oof", "vs_reference",
-                                                                  "calibration")
+                                                                  "calibration", "tuning")
                                         if key in r}
                                     for m, r in v["models"].items()}}
                      for k, v in all_results.items()},

@@ -4,10 +4,11 @@ import time
 
 import numpy as np
 from sklearn.metrics import accuracy_score, brier_score_loss, confusion_matrix, f1_score, roc_auc_score, roc_curve
-from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.model_selection import GridSearchCV, ParameterGrid, StratifiedKFold, train_test_split
+from sklearn.pipeline import Pipeline
 
 from backend.ml.quantum import SEED
-from backend.ml.quantum.baselines import CLASSICAL_MODELS, build_baseline, count_params
+from backend.ml.quantum.baselines import CLASSICAL_GRIDS, CLASSICAL_MODELS, build_baseline, count_params
 from backend.ml.quantum.data import stratified_subsample
 from backend.ml.quantum.hybrid_qnn import HybridQNNClassifier
 from backend.ml.quantum.preprocess import make_preprocessor
@@ -18,6 +19,13 @@ QUANTUM_MODELS = ["qsvm", "vqc", "hybrid_qnn"]
 ALL_MODELS = CLASSICAL_MODELS + QUANTUM_MODELS
 METRIC_KEYS = ["accuracy", "sensitivity", "specificity", "auc", "f1", "brier"]
 SPECIFICITY_TARGETS = (0.90, 0.95)
+INNER_FOLDS = 3
+TUNING_GRIDS = {
+    **CLASSICAL_GRIDS,
+    "qsvm": {"model__C": [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]},
+    "vqc": {"model__lr": [0.01, 0.05, 0.1], "model__epochs": [20, 40]},
+    "hybrid_qnn": {"model__lr": [0.01, 0.05, 0.1], "model__epochs": [20, 40]},
+}
 
 
 def build_model(name: str, n_qubits: int, seed: int = SEED, epochs: int = 40, n_layers: int = 2):
@@ -76,14 +84,38 @@ def calibration_summary(y_true, y_score) -> dict:
             "sens_at_spec": {f"{s:.2f}": sensitivity_at_specificity(y_true, y_score, s) for s in SPECIFICITY_TARGETS}}
 
 
-def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, method="mutual_info", epochs=40):
-    """Fit preprocessor + model on the training part only; return metrics, timings and the fitted pair."""
-    pre = make_preprocessor(n_qubits, method, seed).fit(X_train, y_train)
-    A_train, A_val = pre.transform(X_train), pre.transform(X_val)
-    model = build_model(name, n_qubits, seed, epochs)
+def tune(name, X_train, y_train, n_qubits, seed=SEED, method="mutual_info", epochs=40):
+    """Nested-CV inner loop on the training part only: preprocessor + model in one Pipeline, so supervised
+    feature selection is refitted inside every inner fold. Returns the refitted best pipeline and the search."""
+    pipe = Pipeline([("pre", make_preprocessor(n_qubits, method, seed)), ("model", build_model(name, n_qubits, seed, epochs))])
+    search = GridSearchCV(pipe, TUNING_GRIDS[name], scoring="roc_auc", refit=True, n_jobs=1, error_score="raise",
+                          cv=StratifiedKFold(INNER_FOLDS, shuffle=True, random_state=seed))
+    search.fit(X_train, y_train)
+    return search.best_estimator_, search
+
+
+def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, method="mutual_info", epochs=40,
+                  tuned=False):
+    """Fit preprocessor + model on the training part only; return metrics, timings and the fitted pair.
+
+    tuned=True runs the nested inner search (tune) first; train_time_s then covers the whole search.
+    """
     t0 = time.perf_counter()
-    model.fit(A_train, y_train)
+    tuning = {}
+    if tuned:
+        best, search = tune(name, X_train, y_train, n_qubits, seed, method, epochs)
+        pre, model = best.named_steps["pre"], best.named_steps["model"]
+        tuning = {"best_params": {k.removeprefix("model__"): v for k, v in search.best_params_.items()},
+                  "inner_auc": float(search.best_score_), "n_configs": len(ParameterGrid(TUNING_GRIDS[name]))}
+        A_train = pre.transform(X_train)
+    else:
+        pre = make_preprocessor(n_qubits, method, seed).fit(X_train, y_train)
+        A_train = pre.transform(X_train)
+        model = build_model(name, n_qubits, seed, epochs)
+        t0 = time.perf_counter()
+        model.fit(A_train, y_train)
     train_time = time.perf_counter() - t0
+    A_val = pre.transform(X_val)
     t0 = time.perf_counter()
     score = model.predict_proba(A_val)[:, 1]
     infer_ms = (time.perf_counter() - t0) * 1000 / len(A_val)
@@ -92,21 +124,24 @@ def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, met
     train_acc = float(accuracy_score(y_train, train_pred))
     out = binary_metrics(y_val, pred, score)
     out.update(train_time_s=train_time, infer_ms_per_sample=infer_ms, train_accuracy=train_acc,
-               gen_gap=train_acc - out["accuracy"])
+               gen_gap=train_acc - out["accuracy"], **tuning)
     return out, score, pre, model
 
 
-def cross_validate(name, X, y, n_qubits=6, n_splits=5, seed=SEED, max_train=200, method="mutual_info", epochs=40):
+def cross_validate(name, X, y, n_qubits=6, n_splits=5, seed=SEED, max_train=200, method="mutual_info", epochs=40,
+                   tuned=False):
     """Stratified k-fold. Each training fold is subsampled to max_train rows (same rows for every model).
 
     Every row is scored exactly once, by the model of the fold where it is a validation row (pooled OOF).
+    tuned=True: nested CV, hyperparameters chosen inside each outer training fold (outer rows never seen).
     """
     folds = []
     oof_score, oof_fold = np.full(len(y), np.nan), np.full(len(y), -1)
     model = None
     for k, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits, shuffle=True, random_state=seed).split(X, y)):
         X_tr, y_tr = stratified_subsample(X[train_idx], y[train_idx], max_train, seed)
-        metrics, score, _, model = fit_and_score(name, X_tr, y_tr, X[val_idx], y[val_idx], n_qubits, seed, method, epochs)
+        metrics, score, _, model = fit_and_score(name, X_tr, y_tr, X[val_idx], y[val_idx], n_qubits, seed, method,
+                                                 epochs, tuned)
         folds.append(metrics)
         oof_score[val_idx], oof_fold[val_idx] = score, k
     keys = METRIC_KEYS + ["train_time_s", "infer_ms_per_sample", "train_accuracy", "gen_gap"]
@@ -114,7 +149,15 @@ def cross_validate(name, X, y, n_qubits=6, n_splits=5, seed=SEED, max_train=200,
                for k in keys}
     fpr, tpr, _ = roc_curve(y, oof_score)
     keep = np.unique(np.linspace(0, len(fpr) - 1, min(len(fpr), 60)).astype(int))
+    tuning = None
+    if tuned:
+        inner = float(np.mean([f["inner_auc"] for f in folds]))
+        tuning = {"n_configs": folds[0]["n_configs"], "inner_folds": INNER_FOLDS, "grid": TUNING_GRIDS[name],
+                  "chosen": [f["best_params"] for f in folds], "inner_auc_mean": inner,
+                  # best inner-CV AUC overstates what the chosen setting achieves on unseen rows (Varma & Simon)
+                  "optimism": inner - summary["auc"]["mean"]}
     return {
+        "tuning": tuning,
         "model": name,
         "family": model_family(name),
         "metrics": summary,

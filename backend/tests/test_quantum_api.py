@@ -34,6 +34,19 @@ def test_benchmark_files_written(results_dir):
     assert (results_dir / "models" / "breast_cancer_qsvm.joblib").is_file()
 
 
+def test_tuned_cv_only_experiment_run(tmp_path, monkeypatch):
+    monkeypatch.setattr(benchmark, "RESULTS_DIR", benchmark.RESULTS_DIR)  # --results-dir rebinds the global
+    out = tmp_path / "exp"
+    benchmark.main(["--dataset", "breast_cancer", "--folds", "2", "--max-train", "40", "--n-qubits", "4",
+                    "--models", "logreg,qsvm", "--tune", "--cv-only", "--results-dir", str(out)])
+    summary = (out / "summary.json").read_text(encoding="utf-8")
+    assert '"tuned": true' in summary and '"chosen"' in summary
+    assert not (out / "models").exists() and not list(out.glob("*.png"))
+    assert "Nested tuning" in (out / "summary.md").read_text(encoding="utf-8")
+    with pytest.raises(SystemExit):
+        benchmark.main(["--models", "nope", "--results-dir", str(out)])
+
+
 def test_benchmark_endpoint(client):
     r = client.get("/api/qml/benchmark")
     assert r.status_code == 200

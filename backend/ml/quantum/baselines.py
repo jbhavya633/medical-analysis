@@ -9,6 +9,15 @@ from backend.ml.quantum import SEED
 
 CLASSICAL_MODELS = ["logreg", "svm_rbf", "random_forest", "mlp"]
 
+# Nested-CV grids: exactly 6 configurations per model (equal tuning budget, docs/OPTIMIZATION_PLAN.md E10).
+# Keys are Pipeline parameters ("model__" = the estimator); each grid contains today's default configuration.
+CLASSICAL_GRIDS = {
+    "logreg": {"model__C": [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]},
+    "svm_rbf": {"model__C": [0.1, 1.0, 10.0], "model__gamma": ["scale", 0.1]},
+    "random_forest": {"model__max_depth": [3, 6, None], "model__max_features": ["sqrt", None]},
+    "mlp": {"model__hidden_layer_sizes": [(8,), (16,), (32,)], "model__alpha": [1e-4, 1e-2]},
+}
+
 
 def build_baseline(name: str, seed: int = SEED):
     if name == "logreg":
