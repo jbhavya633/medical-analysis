@@ -288,4 +288,4 @@ if __name__ == '__main__':
             torch.save(checkpoint, MODEL_CHECKPOINT)
             print(f"Saved best model to {MODEL_CHECKPOINT}")
     
-    print(f"Training finished! Best validation accuracy: {best_val_acc:.4f}')
+    print(f"Training finished! Best validation accuracy: {best_val_acc:.4f}")

@@ -360,7 +360,7 @@ def train_model(X, y):
 # ----------------------------
 if __name__ == '__main__':
     # Set data directory
-    data_dir = r"C:\Users\ASUS\Desktop\synthea_sample_data_csv_latest"
+    data_dir = os.getenv("SYNTHEA_DATA_DIR", os.path.join("data", "synthea"))
     
     # Check if directory exists
     if not os.path.exists(data_dir):

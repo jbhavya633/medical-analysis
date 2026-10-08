@@ -363,9 +363,7 @@ def train_model(X, y):
 if __name__ == '__main__':
     try:
         # Set data directory (small subset)
-        data_dir = r"$env:TEMP\synthea_sample_data_csv_latest_small"
-        # Replace the environment variable placeholder with actual path
-        data_dir = os.path.expandvars(data_dir)
+        data_dir = os.getenv("SYNTHEA_DATA_DIR", os.path.join("data", "synthea_small"))
         
         # Check if directory exists
         if not os.path.exists(data_dir):

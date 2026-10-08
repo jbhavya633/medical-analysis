@@ -1,4 +1,4 @@
-﻿import requests
+import requests
 import zipfile
 import io
 import os
@@ -9,16 +9,15 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import hashlib
 
-# Configuration
-MANIFEST_PATH = r'C:\Users\ASUS\Desktop\TCGA-BLCA-August-30-2019-NBIA-manifest.tcia'  # or the other manifest
-# Alternatively, you can point to the other manifest
-# MANIFEST_PATH = r'C:\Users\ASUS\Desktop\CMB-PCA_v12_20260702.tcia'
+import argparse
 
-OUTPUT_DIR = r'C:\Users\ASUS\Desktop\medical analysis\data'
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+# Configuration: override with env vars or --manifest / --output-dir
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MANIFEST_PATH = os.getenv('TCIA_MANIFEST_PATH', os.path.join(REPO_ROOT, 'data', 'manifests', 'TCGA-BLCA-August-30-2019-NBIA-manifest.tcia'))
+OUTPUT_DIR = os.getenv('TCIA_OUTPUT_DIR', os.path.join(REPO_ROOT, 'data', 'tcia'))
 
 def parse_manifest(manifest_path):
-    \"\"\"Parse TCIA manifest to get series UIDs.\"\"\"
+    """Parse TCIA manifest to get series UIDs."""
     with open(manifest_path, 'r') as f:
         lines = f.readlines()
     # Skip header lines until we find 'ListOfSeriesToDownload='
@@ -35,7 +34,7 @@ def parse_manifest(manifest_path):
     return series_uids
 
 def download_series(series_uid, output_dir):
-    \"\"\"Download a series from TCIA given its series UID.\"\"\"
+    """Download a series from TCIA given its series UID."""
     # The manifest includes a downloadServerUrl; we need to extract it from the manifest.
     # For simplicity, we hardcode the URL from the manifest we saw earlier.
     # In practice, we should parse the manifest for downloadServerUrl.
@@ -61,7 +60,7 @@ def download_series(series_uid, output_dir):
         return None
 
 def load_dicom_series(dicom_dir):
-    \"\"\"Load all DICOM files in a directory and stack into a 3D array.\"\"\"
+    """Load all DICOM files in a directory and stack into a 3D array."""
     dicom_files = []
     for root, dirs, files in os.walk(dicom_dir):
         for file in files:
@@ -98,7 +97,7 @@ def load_dicom_series(dicom_dir):
     return stack
 
 def extract_features(image_3d):
-    \"\"\"Extract simple radiomics features from a 3D image.\"\"\"
+    """Extract simple radiomics features from a 3D image."""
     # Flatten the image
     flat = image_3d.flatten()
     # Basic statistics
@@ -121,6 +120,13 @@ def extract_features(image_3d):
     return np.array(list(features.values()))
 
 def main():
+    global MANIFEST_PATH, OUTPUT_DIR
+    parser = argparse.ArgumentParser(description='Download a TCIA manifest and train a demo model.')
+    parser.add_argument('--manifest', default=MANIFEST_PATH, help='Path to the .tcia manifest file')
+    parser.add_argument('--output-dir', default=OUTPUT_DIR, help='Directory for downloads and artifacts')
+    args = parser.parse_args()
+    MANIFEST_PATH, OUTPUT_DIR = args.manifest, args.output_dir
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     # Parse manifest
     series_uids = parse_manifest(MANIFEST_PATH)
     print(f'Found {len(series_uids)} series in manifest.')
