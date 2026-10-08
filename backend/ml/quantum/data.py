@@ -43,6 +43,26 @@ class DatasetUnavailableError(RuntimeError):
 
 
 def load_dataset(name: str) -> tuple[np.ndarray, np.ndarray, list[str]]:
+    """Built-in datasets load here; every other registered dataset loads through backend.ml.quantum.registry."""
+    if name in DATASETS:
+        return load_builtin(name)
+    from backend.ml.quantum import registry
+    if name in registry.REGISTRY:
+        return registry.load(registry.REGISTRY[name])
+    raise KeyError(f"unknown dataset: {name}")
+
+
+def dataset_info(name: str) -> dict:
+    """Title, source, licence and positive class for any registered dataset (built-in or registry)."""
+    if name in DATASETS:
+        return DATASETS[name]
+    from backend.ml.quantum import registry
+    e = registry.REGISTRY[name]
+    return {"title": e.title, "positive_class": e.positive_class, "source": e.source, "url": e.url,
+            "licence": e.licence, "split": e.split, "provenance": e.provenance}
+
+
+def load_builtin(name: str) -> tuple[np.ndarray, np.ndarray, list[str]]:
     if name == "breast_cancer":
         data = load_breast_cancer()
         return data.data.astype(float), (data.target == 0).astype(int), list(data.feature_names)

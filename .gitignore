@@ -17,3 +17,5 @@ backend/ml/quantum/data_cache/
 backend/ml/quantum/results/models/*_job_*
 temp_git/
 tmpgit/
+# raw benchmark datasets (downloaded, never committed; see backend/ml/quantum/registry.py)
+data/raw/
