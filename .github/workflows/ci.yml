@@ -23,7 +23,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Lint (non-blocking: pre-existing backlog)
+      - name: "Lint (non-blocking, pre-existing backlog)"
         run: npm run lint
         continue-on-error: true
       - run: npm run type-check
