@@ -28,24 +28,36 @@ TUNING_GRIDS = {
     "vqc": {"model__lr": [0.01, 0.05, 0.1], "model__epochs": [20, 40]},
     "hybrid_qnn": {"model__lr": [0.01, 0.05, 0.1], "model__epochs": [20, 40]},
 }
-# Experiment-only variants (docs/OPTIMIZATION_PLAN.md); not part of the main comparison table.
-EXPERIMENT_MODELS = ["qsvm_c"]
+# Experiment-only variants (docs/OPTIMIZATION_PLAN.md E4/E6), each trained exactly like its parent; not part of
+# the main comparison table. Parameter counts at 6 qubits: vqc 26; vqc_3layer, vqc_scale, vqc_reupload_scale 38.
+VQC_VARIANTS = {
+    "vqc_3layer": {"n_layers": 3},                    # parameter-matched capacity control
+    "vqc_scale": {"input_scaling": "affine"},         # trainable a_i x_i + b_i, encoded once
+    "vqc_reupload_scale": {"input_scaling": "reupload"},
+    "vqc_allz": {"readout": "allz"},                  # every qubit reaches the output, so the next is a fair ablation
+    "vqc_allz_noent": {"readout": "allz", "entangle": False},
+}
+EXPERIMENT_MODELS = ["qsvm_c", *VQC_VARIANTS, "hybrid_classical"]
+TUNING_GRIDS.update({m: TUNING_GRIDS["vqc"] for m in VQC_VARIANTS})
+TUNING_GRIDS["hybrid_classical"] = TUNING_GRIDS["hybrid_qnn"]
 
 
 def build_model(name: str, n_qubits: int, seed: int = SEED, epochs: int = 40, n_layers: int = 2):
     if name in ("qsvm", "qsvm_c"):
         return QuantumKernelSVM(n_qubits=n_qubits, seed=seed)
-    if name == "vqc":
-        return VQCClassifier(n_qubits=n_qubits, n_layers=n_layers, epochs=epochs, seed=seed)
-    if name == "hybrid_qnn":
-        return HybridQNNClassifier(n_qubits=n_qubits, n_layers=n_layers, epochs=epochs, seed=seed)
+    if name == "vqc" or name in VQC_VARIANTS:
+        options = {"n_layers": n_layers, **VQC_VARIANTS.get(name, {})}
+        return VQCClassifier(n_qubits=n_qubits, epochs=epochs, seed=seed, **options)
+    if name in ("hybrid_qnn", "hybrid_classical"):
+        return HybridQNNClassifier(n_qubits=n_qubits, n_layers=n_layers, epochs=epochs, seed=seed,
+                                   quantum=name == "hybrid_qnn")
     return build_baseline(name, seed)
 
 
 def model_family(name: str) -> str:
     if name.startswith(("qsvm", "vqc")):
         return "quantum"
-    if name.startswith("hybrid_qnn"):
+    if name == "hybrid_qnn":
         return "hybrid"
     return "classical"
 

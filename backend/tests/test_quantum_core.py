@@ -151,6 +151,52 @@ def test_vqc_loss_decreases_and_pickles(small):
     assert np.allclose(clone.predict_proba(A), m.predict_proba(A))
 
 
+@pytest.mark.parametrize("name,n_params", [("vqc", 2 * NQ * 2 + 2), ("vqc_3layer", 3 * NQ * 2 + 2),
+                                           ("vqc_scale", 2 * NQ * 2 + 2 + 2 * NQ),
+                                           ("vqc_reupload_scale", 2 * NQ * 2 + 2 + 2 * NQ),
+                                           ("vqc_allz", 2 * NQ * 2 + 2), ("vqc_allz_noent", 2 * NQ * 2 + 2)])
+def test_vqc_variants_fit_and_count_params(small, name, n_params):
+    _, y, _, _, A = small
+    m = build_model(name, NQ, epochs=2).fit(A, y)
+    assert m.n_params_ == n_params and m.predict_proba(A).shape == (len(y), 2) and m.circuit_depth_ > 0
+    clone = pickle.loads(pickle.dumps(m))
+    assert np.allclose(clone.predict_proba(A[:4]), m.predict_proba(A[:4]))
+
+
+def test_variants_start_from_the_base_circuit(small):
+    _, _, _, _, A = small
+    x = torch.tensor(A[:5])
+    torch.manual_seed(0)
+    base = VQCClassifier(n_qubits=NQ)._build().double()
+    for opts in ({"input_scaling": "affine"}, {"input_scaling": "reupload", "n_layers": 1}):
+        torch.manual_seed(0)
+        v = VQCClassifier(n_qubits=NQ, **opts)._build().double()
+        if opts.get("n_layers") == 1:  # one layer: re-uploading once == encoding once
+            torch.manual_seed(0)
+            base1 = VQCClassifier(n_qubits=NQ, n_layers=1)._build().double()
+            assert torch.allclose(v(x), base1(x))
+        else:
+            assert torch.allclose(v(x), base(x))
+    with pytest.raises(ValueError):
+        VQCClassifier(n_qubits=NQ, readout="nope")._build()
+
+
+def test_entanglement_ablation_removes_cnots():
+    import pennylane as qml
+    from backend.ml.quantum.vqc import make_qnode
+    args = (torch.zeros(NQ, dtype=torch.float64), torch.zeros(2, NQ, 2, dtype=torch.float64))
+    gates = lambda q: qml.specs(q)(*args)["resources"].gate_types  # noqa: E731
+    assert gates(make_qnode(NQ, 2, True))["CNOT"] == 2 * NQ
+    assert "CNOT" not in gates(make_qnode(NQ, 2, True, entangle=False))
+
+
+def test_hybrid_classical_ablation(small):
+    _, y, _, _, A = small
+    m = build_model("hybrid_classical", NQ, epochs=2).fit(A, y)
+    assert not hasattr(m, "n_qubits_") and m.n_params_ == 2 * (NQ * NQ + NQ) + NQ + 1  # pre + mid + head
+    assert model_family("hybrid_classical") == "classical"
+
+
 def test_hybrid_qnn_forward_shape(small):
     _, y, _, _, A = small
     m = HybridQNNClassifier(n_qubits=NQ, n_layers=1, epochs=2).fit(A, y)

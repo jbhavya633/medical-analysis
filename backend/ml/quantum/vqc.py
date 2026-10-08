@@ -17,23 +17,31 @@ def angle_encoding(x, n_qubits: int):
         qml.RY(x[..., i], wires=i)
 
 
-def hardware_efficient_ansatz(weights, n_qubits: int):
-    """weights: (n_layers, n_qubits, 2) -> RY, RZ per qubit then a CNOT ring, per layer."""
+def hardware_efficient_ansatz(weights, n_qubits: int, entangle: bool = True):
+    """weights: (n_layers, n_qubits, 2) -> RY, RZ per qubit then a CNOT ring (unless entangle=False), per layer."""
     for layer in range(weights.shape[0]):
         for i in range(n_qubits):
             qml.RY(weights[layer, i, 0], wires=i)
             qml.RZ(weights[layer, i, 1], wires=i)
-        for i in range(n_qubits):
-            qml.CNOT(wires=[i, (i + 1) % n_qubits])
+        if entangle:
+            for i in range(n_qubits):
+                qml.CNOT(wires=[i, (i + 1) % n_qubits])
 
 
-def make_qnode(n_qubits: int, n_layers: int, all_wires: bool):
+def make_qnode(n_qubits: int, n_layers: int, all_wires: bool, reupload: bool = False, entangle: bool = True):
+    """reupload=True: inputs hold one angle vector per layer (n_layers * n_qubits values) and each layer is
+    preceded by its own RY encoding (data re-uploading). entangle=False drops the CNOT ring (ablation)."""
     dev = qml.device("default.qubit", wires=n_qubits)
 
     @qml.qnode(dev, interface="torch", diff_method="backprop")
     def circuit(inputs, weights):
-        angle_encoding(inputs, n_qubits)
-        hardware_efficient_ansatz(weights, n_qubits)
+        if reupload:
+            for layer in range(n_layers):
+                angle_encoding(inputs[..., layer * n_qubits:(layer + 1) * n_qubits], n_qubits)
+                hardware_efficient_ansatz(weights[layer:layer + 1], n_qubits, entangle)
+        else:
+            angle_encoding(inputs, n_qubits)
+            hardware_efficient_ansatz(weights, n_qubits, entangle)
         if all_wires:
             return [qml.expval(qml.PauliZ(i)) for i in range(n_qubits)]
         return qml.expval(qml.PauliZ(0))
@@ -78,14 +86,19 @@ class TorchQuantumClassifier(ClassifierMixin, BaseEstimator):
         self.classes_ = np.array([0, 1])
         self.module_ = self._build().double()
         self.loss_history_ = fit_torch(self.module_, X, y, self.epochs, self.lr, self.batch_size, self.seed)
-        self.n_qubits_ = self.n_qubits
         self.n_params_ = int(sum(p.numel() for p in self.module_.parameters()))
-        weights = torch.zeros(self.n_layers, self.n_qubits, 2, dtype=torch.float64)
-        self.circuit_depth_ = circuit_depth(self._qnode(), torch.tensor(X[0]), weights)
+        qnode = self._qnode()
+        if qnode is not None:  # None: classical ablation, no circuit to report
+            self.n_qubits_ = self.n_qubits
+            weights = torch.zeros(self.n_layers, self.n_qubits, 2, dtype=torch.float64)
+            self.circuit_depth_ = circuit_depth(qnode, torch.tensor(self._circuit_inputs(X[0])), weights)
         return self
 
     def _qnode(self):
         return make_qnode(self.n_qubits, self.n_layers, all_wires=False)
+
+    def _circuit_inputs(self, x):
+        return x
 
     def predict_proba(self, X):
         with torch.no_grad():
@@ -110,26 +123,65 @@ class TorchQuantumClassifier(ClassifierMixin, BaseEstimator):
             self.module_.load_state_dict(module_state)
 
 
+INPUT_SCALINGS = ("none", "affine", "reupload")
+READOUTS = ("z0", "allz")
+
+
 class _VQCModule(torch.nn.Module):
-    def __init__(self, n_qubits, n_layers):
+    """input_scaling: "none" (angles = x), "affine" (trainable a_i x_i + b_i, encoded once) or "reupload"
+    (trainable s_{l,i} x_i re-encoded before every layer). readout: <Z0> or the mean of <Z_i> over all qubits.
+    The extra input parameters start at a = s = 1, b = 0, so every variant starts from the base circuit."""
+
+    def __init__(self, n_qubits, n_layers, input_scaling="none", readout="z0", entangle=True):
         super().__init__()
-        self.q = qml.qnn.TorchLayer(make_qnode(n_qubits, n_layers, all_wires=False),
-                                    {"weights": (n_layers, n_qubits, 2)})
+        self.input_scaling, self.readout, self.n_layers = input_scaling, readout, n_layers
+        self.q = qml.qnn.TorchLayer(
+            make_qnode(n_qubits, n_layers, all_wires=readout == "allz", reupload=input_scaling == "reupload",
+                       entangle=entangle),
+            {"weights": (n_layers, n_qubits, 2)})
         self.scale = torch.nn.Parameter(torch.tensor(3.0))
         self.bias = torch.nn.Parameter(torch.tensor(0.0))
+        if input_scaling == "affine":
+            self.in_scale = torch.nn.Parameter(torch.ones(n_qubits))
+            self.in_shift = torch.nn.Parameter(torch.zeros(n_qubits))
+        elif input_scaling == "reupload":
+            self.in_scale = torch.nn.Parameter(torch.ones(n_layers, n_qubits))
 
     def forward(self, x):
-        return self.scale * self.q(x) + self.bias
+        if self.input_scaling == "affine":
+            x = self.in_scale * x + self.in_shift
+        elif self.input_scaling == "reupload":
+            x = (self.in_scale.unsqueeze(0) * x.unsqueeze(1)).reshape(len(x), -1)
+        out = self.q(x)
+        if self.readout == "allz":
+            out = out.mean(dim=-1)
+        return self.scale * out + self.bias
 
 
 class VQCClassifier(TorchQuantumClassifier):
-    def __init__(self, n_qubits=6, n_layers=2, epochs=40, lr=0.05, batch_size=32, seed=SEED):
+    # defaults for artifacts pickled before these options existed
+    input_scaling, readout, entangle = "none", "z0", True
+
+    def __init__(self, n_qubits=6, n_layers=2, epochs=40, lr=0.05, batch_size=32, seed=SEED,
+                 input_scaling="none", readout="z0", entangle=True):
         self.n_qubits = n_qubits
         self.n_layers = n_layers
         self.epochs = epochs
         self.lr = lr
         self.batch_size = batch_size
         self.seed = seed
+        self.input_scaling = input_scaling
+        self.readout = readout
+        self.entangle = entangle
 
     def _build(self):
-        return _VQCModule(self.n_qubits, self.n_layers)
+        if self.input_scaling not in INPUT_SCALINGS or self.readout not in READOUTS:
+            raise ValueError(f"input_scaling must be one of {INPUT_SCALINGS}, readout one of {READOUTS}")
+        return _VQCModule(self.n_qubits, self.n_layers, self.input_scaling, self.readout, self.entangle)
+
+    def _qnode(self):
+        return make_qnode(self.n_qubits, self.n_layers, all_wires=self.readout == "allz",
+                          reupload=self.input_scaling == "reupload", entangle=self.entangle)
+
+    def _circuit_inputs(self, x):
+        return np.tile(x, self.n_layers) if self.input_scaling == "reupload" else x

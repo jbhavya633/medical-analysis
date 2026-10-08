@@ -56,6 +56,9 @@ MODEL_LABELS = {
     "qsvm": "Quantum-kernel SVM", "vqc": "VQC", "hybrid_qnn": "Hybrid QNN",
     # experiment-only variants (cv-only runs; no plots)
     "qsvm_c": "QSVM, C-tuned control (s = 1)",
+    "vqc_3layer": "VQC, 3 layers (parameter-matched control)", "vqc_scale": "VQC + trainable input scaling",
+    "vqc_reupload_scale": "VQC + data re-uploading (scaled)", "vqc_allz": "VQC, all-qubit readout",
+    "vqc_allz_noent": "VQC, all-qubit readout, no CNOTs", "hybrid_classical": "Hybrid, quantum layer -> Linear+tanh",
 }
 
 
