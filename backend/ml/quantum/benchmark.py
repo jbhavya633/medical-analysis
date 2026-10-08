@@ -189,7 +189,7 @@ def main(argv=None):
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",
-                        handlers=[logging.StreamHandler(), logging.FileHandler(RESULTS_DIR / "benchmark.log", mode="w")])
+                        handlers=[logging.StreamHandler(), logging.FileHandler(RESULTS_DIR / "benchmark.log", mode="w", encoding="utf-8")])
     warnings.filterwarnings("ignore")
     logging.getLogger("shap").setLevel(logging.WARNING)
     models = [m for m in args.models.split(",") if m]
