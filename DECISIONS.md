@@ -22,3 +22,8 @@ Log of autonomous decisions taken during the SIH26139 build (one line each).
 - 20:48 (dev phase) Nested optimism is measured as mean best inner-CV AUC minus outer AUC (no extra outer fits), not as a non-nested best-of-grid on outer folds, which would cost 6x.
 - 20:48 (dev phase) Learning curves stay untuned (default hyperparameters) in tuned runs to bound cost; hold-out models for /predict are tuned on the hold-out training rows only. API /train jobs stay untuned.
 - 20:48 (dev phase) Reproduction check on this machine: untuned heart LogReg/VQC match the logged run exactly; QSVM accuracy matches, QSVM AUC 0.8351 vs logged 0.8356 (SVC Platt probabilities, different machine/library build). All new results come from this machine.
+- 22:16 (v2) New module backend/ml/quantum/multibench.py (A7 justification): the prompt requires a checkpointed, resumable multi-dataset runner; benchmark.py stays the single-run v1 harness. Checkpoint per dataset x model x repeat x fold; 6 worker processes, 1 torch thread each (12 cores, ~15 GB RAM).
+- 22:16 (v2) New module backend/ml/quantum/registry.py (named by the prompt). CKD uses UCI's processed CSV (the official zip holds a .rar). Statlog is an exact Cleveland subset: sanity only.
+- 22:16 (v2) Leakage control beyond the prereg: identical feature rows (and Parkinson's subjects) are kept in one fold via StratifiedGroupKFold (outer and inner).
+- 22:16 (v2) Old two-dataset E6/E4 chain stopped (superseded by the pre-registered development run with 3 repeats).
+

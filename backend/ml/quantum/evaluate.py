@@ -3,8 +3,23 @@
 import time
 
 import numpy as np
-from sklearn.metrics import accuracy_score, brier_score_loss, confusion_matrix, f1_score, roc_auc_score, roc_curve
-from sklearn.model_selection import GridSearchCV, ParameterGrid, StratifiedKFold, train_test_split
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    brier_score_loss,
+    confusion_matrix,
+    f1_score,
+    matthews_corrcoef,
+    roc_auc_score,
+    roc_curve,
+)
+from sklearn.model_selection import (
+    GridSearchCV,
+    ParameterGrid,
+    StratifiedGroupKFold,
+    StratifiedKFold,
+    train_test_split,
+)
 from sklearn.pipeline import Pipeline
 
 from backend.ml.quantum import SEED
@@ -194,18 +209,21 @@ def calibration_summary(y_true, y_score) -> dict:
             "decision_curve": decision_curve(y_true, y_score)}
 
 
-def tune(name, X_train, y_train, n_qubits, seed=SEED, method="mutual_info", epochs=40):
+def tune(name, X_train, y_train, n_qubits, seed=SEED, method="mutual_info", epochs=40, groups=None):
     """Nested-CV inner loop on the training part only: preprocessor + model in one Pipeline, so supervised
-    feature selection is refitted inside every inner fold. Returns the refitted best pipeline and the search."""
+    feature selection is refitted inside every inner fold. Returns the refitted best pipeline and the search.
+    groups (same subject / identical rows) keeps each group inside one inner fold."""
     pipe = Pipeline([("pre", make_preprocessor(n_qubits, method, seed)), ("model", build_model(name, n_qubits, seed, epochs))])
+    inner = (StratifiedGroupKFold(INNER_FOLDS, shuffle=True, random_state=seed) if groups is not None
+             else StratifiedKFold(INNER_FOLDS, shuffle=True, random_state=seed))
     search = GridSearchCV(pipe, TUNING_GRIDS[name], scoring="roc_auc", refit=True, n_jobs=1, error_score="raise",
-                          cv=StratifiedKFold(INNER_FOLDS, shuffle=True, random_state=seed))
-    search.fit(X_train, y_train)
+                          cv=inner)
+    search.fit(X_train, y_train, groups=groups)
     return search.best_estimator_, search
 
 
 def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, method="mutual_info", epochs=40,
-                  tuned=False):
+                  tuned=False, groups=None):
     """Fit preprocessor + model on the training part only; return metrics, timings and the fitted pair.
 
     tuned=True runs the nested inner search (tune) first; train_time_s then covers the whole search.
@@ -213,7 +231,7 @@ def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, met
     t0 = time.perf_counter()
     tuning = {}
     if tuned:
-        best, search = tune(name, X_train, y_train, n_qubits, seed, method, epochs)
+        best, search = tune(name, X_train, y_train, n_qubits, seed, method, epochs, groups)
         pre, model = best.named_steps["pre"], best.named_steps["model"]
         tuning = {"best_params": {k.split("__")[-1]: describe(v) for k, v in search.best_params_.items()},
                   "inner_auc": float(search.best_score_), "n_configs": len(ParameterGrid(TUNING_GRIDS[name]))}
@@ -233,6 +251,8 @@ def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, met
     train_pred = (model.predict_proba(A_train)[:, 1] >= 0.5).astype(int)  # same rule as validation
     train_acc = float(accuracy_score(y_train, train_pred))
     out = binary_metrics(y_val, pred, score)
+    out.update(balanced_accuracy=float(balanced_accuracy_score(y_val, pred)),
+               mcc=float(matthews_corrcoef(y_val, pred)))
     out.update(train_time_s=train_time, infer_ms_per_sample=infer_ms, train_accuracy=train_acc,
                gen_gap=train_acc - out["accuracy"], **tuning)
     if hasattr(model, "kernel_spectrum_"):
