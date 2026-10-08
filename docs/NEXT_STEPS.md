@@ -92,19 +92,19 @@ Create a directory structure like:
 `
 medfusion-data/
 +- mimiciv/
-¦  +- patients/
-¦  +- hospitals/
-¦  +- ... (MIMIC-IV extracted files)
+|  +- patients/
+|  +- hospitals/
+|  +- ... (MIMIC-IV extracted files)
 +- mimic-iv-ecg/
-¦  +- p10000000/
-¦  +- ... (ECG files by subject_id)
+|  +- p10000000/
+|  +- ... (ECG files by subject_id)
 +- mimic-cxr/
-¦  +- files/
-¦  +- ... (CXR files)
+|  +- files/
+|  +- ... (CXR files)
 +- ptb-xl/
-¦  +- ... (PTB-XL files)
+|  +- ... (PTB-XL files)
 +- chexpert/
-¦  +- ... (CheXpert files)
+|  +- ... (CheXpert files)
 +- lidc-idri/
    +- ... (LIDC-IDRI files)
 `
