@@ -31,7 +31,9 @@ from backend.ml.quantum.explain import (
 )
 from backend.ml.quantum.preprocess import selected_feature_names
 from backend.ml.quantum.qkernel import kernel_from_states, statevectors
+from backend.ml.quantum.stats import compare_to_reference
 
+REFERENCE_MODEL = "logreg"
 RESULTS_DIR = Path(os.getenv("QML_RESULTS_DIR", Path(__file__).resolve().parent / "results"))
 logger = logging.getLogger("qml.benchmark")
 
@@ -59,6 +61,13 @@ def run_dataset(name, n_qubits, seed, folds, max_train, epochs, models):
                     model, m["accuracy"]["mean"], m["accuracy"]["std"], m["sensitivity"]["mean"],
                     m["specificity"]["mean"], m["auc"]["mean"], m["train_time_s"]["mean"], time.perf_counter() - t0)
         results[model] = cv
+
+    # Significance vs logistic regression on pooled OOF rows (stats.py); same rows for every model.
+    comparisons = compare_to_reference(
+        y, {m: r["oof"]["score"] for m, r in results.items()},
+        {m: [f["auc"] for f in r["folds"]] for m, r in results.items()}, REFERENCE_MODEL, seed)
+    for model, cmp in comparisons.items():
+        results[model]["vs_reference"] = cmp
 
     # Held-out 20% split: fit once per model, save it, and explain it.
     X_tr, X_te, y_tr, y_te = holdout_split(X, y, seed=seed)
@@ -90,7 +99,8 @@ def run_dataset(name, n_qubits, seed, folds, max_train, epochs, models):
             "holdout_metrics": holdout,
         }, model_dir / f"{name}_{model}.joblib")
     return {"dataset": name, "info": DATASETS[name], "n_samples": int(len(y)), "n_raw_features": int(X.shape[1]),
-            "positive_rate": float(y.mean()), "feature_names": feature_names, "models": results}
+            "positive_rate": float(y.mean()), "feature_names": feature_names, "y": y.astype(int).tolist(),
+            "reference_model": REFERENCE_MODEL, "models": results}
 
 
 def write_summary_md(all_results, config, path):
@@ -105,17 +115,26 @@ def write_summary_md(all_results, config, path):
     for ds in all_results.values():
         lines += [f"## {ds['info']['title']} (`{ds['dataset']}`, n={ds['n_samples']}, "
                   f"positive = {ds['info']['positive_class']})", "",
-                  "| Model | Family | Accuracy | Sensitivity | Specificity | AUC | F1 | Train s | Infer ms/sample | Gen. gap | Qubits | Depth | Params |",
-                  "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+                  "| Model | Family | Accuracy | Sensitivity | Specificity | AUC | F1 | ΔAUC vs LogReg [95% CI] | Train s | Infer ms/sample | Gen. gap | Qubits | Depth | Params |",
+                  "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
         for name, r in ds["models"].items():
             m = r["metrics"]
             f = lambda k: f"{m[k]['mean']:.3f} ± {m[k]['std']:.3f}"
             lines.append(f"| {MODEL_LABELS[name]} | {r['family']} | {f('accuracy')} | {f('sensitivity')} | "
-                         f"{f('specificity')} | {f('auc')} | {f('f1')} | {m['train_time_s']['mean']:.3f} | "
-                         f"{m['infer_ms_per_sample']['mean']:.3f} | {m['gen_gap']['mean']:.3f} | "
-                         f"{r['n_qubits'] or '-'} | {r['circuit_depth'] or '-'} | {r['n_params']} |")
-        lines.append("")
+                         f"{f('specificity')} | {f('auc')} | {f('f1')} | {format_delta(name, r.get('vs_reference'))} | "
+                         f"{m['train_time_s']['mean']:.3f} | {m['infer_ms_per_sample']['mean']:.3f} | "
+                         f"{m['gen_gap']['mean']:.3f} | {r['n_qubits'] or '-'} | {r['circuit_depth'] or '-'} | {r['n_params']} |")
+        lines += ["", "ΔAUC: pooled out-of-fold AUC minus logistic regression's on the same rows; paired stratified "
+                  "bootstrap (2,000 resamples) 95% CI. * = significant after Holm correction (alpha 0.05); "
+                  "otherwise not significant.", ""]
     path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def format_delta(model, cmp) -> str:
+    if not cmp:
+        return "reference" if model == REFERENCE_MODEL else "-"
+    lo, hi = cmp["ci95"]
+    return f"{cmp['delta']:+.3f} [{lo:+.3f}, {hi:+.3f}]{'*' if cmp['significant'] else ''}"
 
 
 def plot_dataset(ds, out_dir):
@@ -214,9 +233,11 @@ def main(argv=None):
         "runtime_s": round(time.perf_counter() - started, 1),
         "disclaimer": "Research prototype on public benchmark data. Not a diagnostic tool.",
         "datasets": {k: {"info": v["info"], "n_samples": v["n_samples"], "positive_rate": v["positive_rate"],
+                         "y": v["y"], "reference_model": v["reference_model"],
                          "models": {m: {key: r[key] for key in ("family", "metrics", "roc", "learning_curve",
                                                                   "n_qubits", "circuit_depth", "n_params",
-                                                                  "holdout", "explain")}
+                                                                  "holdout", "explain", "oof", "vs_reference")
+                                        if key in r}
                                     for m, r in v["models"].items()}}
                      for k, v in all_results.items()},
     }

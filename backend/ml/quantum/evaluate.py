@@ -66,19 +66,22 @@ def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, met
 
 
 def cross_validate(name, X, y, n_qubits=6, n_splits=5, seed=SEED, max_train=200, method="mutual_info", epochs=40):
-    """Stratified k-fold. Each training fold is subsampled to max_train rows (same rows for every model)."""
-    folds, oof_true, oof_score = [], [], []
+    """Stratified k-fold. Each training fold is subsampled to max_train rows (same rows for every model).
+
+    Every row is scored exactly once, by the model of the fold where it is a validation row (pooled OOF).
+    """
+    folds = []
+    oof_score, oof_fold = np.full(len(y), np.nan), np.full(len(y), -1)
     model = None
-    for train_idx, val_idx in StratifiedKFold(n_splits, shuffle=True, random_state=seed).split(X, y):
+    for k, (train_idx, val_idx) in enumerate(StratifiedKFold(n_splits, shuffle=True, random_state=seed).split(X, y)):
         X_tr, y_tr = stratified_subsample(X[train_idx], y[train_idx], max_train, seed)
         metrics, score, _, model = fit_and_score(name, X_tr, y_tr, X[val_idx], y[val_idx], n_qubits, seed, method, epochs)
         folds.append(metrics)
-        oof_true.append(y[val_idx])
-        oof_score.append(score)
+        oof_score[val_idx], oof_fold[val_idx] = score, k
     keys = METRIC_KEYS + ["train_time_s", "infer_ms_per_sample", "train_accuracy", "gen_gap"]
     summary = {k: {"mean": float(np.mean([f[k] for f in folds])), "std": float(np.std([f[k] for f in folds]))}
                for k in keys}
-    fpr, tpr, _ = roc_curve(np.concatenate(oof_true), np.concatenate(oof_score))
+    fpr, tpr, _ = roc_curve(y, oof_score)
     keep = np.unique(np.linspace(0, len(fpr) - 1, min(len(fpr), 60)).astype(int))
     return {
         "model": name,
@@ -90,6 +93,7 @@ def cross_validate(name, X, y, n_qubits=6, n_splits=5, seed=SEED, max_train=200,
         "circuit_depth": int(getattr(model, "circuit_depth_", 0)) or None,
         "n_params": count_params(model),
         "loss_history": [round(v, 5) for v in getattr(model, "loss_history_", [])],
+        "oof": {"score": oof_score.round(5).tolist(), "fold": oof_fold.tolist()},
     }
 
 

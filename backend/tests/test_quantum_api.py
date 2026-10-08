@@ -41,6 +41,11 @@ def test_benchmark_endpoint(client):
     assert set(body["datasets"]["breast_cancer"]["models"]) == {"logreg", "qsvm"}
     assert "not a diagnostic tool" in body["disclaimer"].lower()
     assert "breast_cancer_qsvm" in body["trained_models"]
+    ds = body["datasets"]["breast_cancer"]
+    assert len(ds["y"]) == ds["n_samples"] == len(ds["models"]["qsvm"]["oof"]["score"])
+    cmp = ds["models"]["qsvm"]["vs_reference"]
+    assert cmp["vs"] == "logreg" and len(cmp["ci95"]) == 2 and isinstance(cmp["significant"], bool)
+    assert "vs_reference" not in ds["models"]["logreg"]
 
 
 def test_benchmark_missing_is_404(client, tmp_path, monkeypatch):
