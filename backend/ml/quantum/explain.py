@@ -44,13 +44,13 @@ def kernel_alignment(K: np.ndarray, y: np.ndarray) -> float:
     return float(np.sum(K * Y) / (np.linalg.norm(K) * np.linalg.norm(Y)))
 
 
-def feature_map_sensitivity(X: np.ndarray, n_qubits: int, feature_names, eps=0.1, reps=2) -> dict:
+def feature_map_sensitivity(X: np.ndarray, n_qubits: int, feature_names, eps=0.1, reps=2, bandwidth=1.0) -> dict:
     """Mean infidelity 1 - |<psi(x)|psi(x + eps e_i)>|^2 per input feature (how strongly the map reacts)."""
-    base = statevectors(X, n_qubits, reps)
+    base = statevectors(X, n_qubits, reps, bandwidth)
     out = {}
     for i, name in enumerate(feature_names):
         Xp = X.copy()
         Xp[:, i] = np.clip(Xp[:, i] + eps, 0, np.pi)
-        fid = np.diag(kernel_from_states(base, statevectors(Xp, n_qubits, reps)))
+        fid = np.diag(kernel_from_states(base, statevectors(Xp, n_qubits, reps, bandwidth)))
         out[name] = round(float(np.mean(1 - fid)), 6)
     return out

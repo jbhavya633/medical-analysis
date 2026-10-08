@@ -39,7 +39,7 @@ from backend.ml.quantum.explain import (
     shap_scores,
 )
 from backend.ml.quantum.preprocess import selected_feature_names
-from backend.ml.quantum.qkernel import kernel_from_states, statevectors
+from backend.ml.quantum.qkernel import QuantumKernelSVM, kernel_from_states, statevectors
 from backend.ml.quantum.stats import compare_to_reference
 
 REFERENCE_MODEL = "logreg"
@@ -54,6 +54,8 @@ MODEL_COLORS = {
 MODEL_LABELS = {
     "logreg": "Logistic regression", "svm_rbf": "SVM (RBF)", "random_forest": "Random forest", "mlp": "MLP",
     "qsvm": "Quantum-kernel SVM", "vqc": "VQC", "hybrid_qnn": "Hybrid QNN",
+    # experiment-only variants (cv-only runs; no plots)
+    "qsvm_c": "QSVM, C-tuned control (s = 1)",
 }
 
 
@@ -104,10 +106,12 @@ def run_dataset(name, n_qubits, seed, folds, max_train, epochs, models, tuned=Fa
             "permutation_importance": permutation_scores(fitted, A_te, y_te, selected, seed),
             "shap_mean_abs": shap_scores(fitted, A_bg, A_te[:8], selected, nsamples=100, seed=seed),
         }
-        if model == "qsvm":
-            states = statevectors(pre.transform(X_tr), n_qubits)
+        if isinstance(fitted, QuantumKernelSVM):
+            states = statevectors(pre.transform(X_tr), n_qubits, fitted.reps, fitted.bandwidth)
             explain["kernel_alignment"] = round(kernel_alignment(kernel_from_states(states, states), y_tr), 5)
-            explain["feature_map_sensitivity"] = feature_map_sensitivity(A_te, n_qubits, selected)
+            explain["feature_map_sensitivity"] = feature_map_sensitivity(A_te, n_qubits, selected,
+                                                                         reps=fitted.reps, bandwidth=fitted.bandwidth)
+            explain["bandwidth"] = fitted.bandwidth
         results[model]["holdout"] = {k: v for k, v in holdout.items()}
         results[model]["explain"] = explain
         joblib.dump({
@@ -302,7 +306,7 @@ def main(argv=None):
                          "models": {m: {key: r[key] for key in ("family", "metrics", "roc", "learning_curve",
                                                                   "n_qubits", "circuit_depth", "n_params",
                                                                   "holdout", "explain", "oof", "vs_reference",
-                                                                  "calibration", "tuning")
+                                                                  "calibration", "tuning", "folds")
                                         if key in r}
                                     for m, r in v["models"].items()}}
                      for k, v in all_results.items()},

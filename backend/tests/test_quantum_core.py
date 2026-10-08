@@ -11,7 +11,7 @@ from backend.ml.quantum.evaluate import binary_metrics, build_model, cross_valid
 from backend.ml.quantum.explain import feature_map_sensitivity, kernel_alignment, permutation_scores, shap_scores
 from backend.ml.quantum.hybrid_qnn import HybridQNNClassifier
 from backend.ml.quantum.preprocess import make_preprocessor, selected_feature_names, to_angles
-from backend.ml.quantum.qkernel import QuantumKernelSVM, kernel_matrix
+from backend.ml.quantum.qkernel import QuantumKernelSVM, kernel_matrix, kernel_spectrum
 from backend.ml.quantum.vqc import VQCClassifier
 
 NQ = 4
@@ -109,6 +109,22 @@ def test_kernel_matrix_properties(small):
     assert K.min() >= 0 and K.max() <= 1 + 1e-9
 
 
+def test_bandwidth_one_is_the_original_map_and_smaller_widens_the_kernel(small):
+    A = small[4][:15]
+    assert np.allclose(kernel_matrix(A, A, NQ, bandwidth=1.0), kernel_matrix(A, A, NQ))
+    wide, narrow = kernel_spectrum(kernel_matrix(A, A, NQ, bandwidth=0.1)), kernel_spectrum(kernel_matrix(A, A, NQ))
+    assert wide["mean_offdiag"] > narrow["mean_offdiag"]
+    assert 0 < narrow["eff_rank_ratio"] <= 1 and 0 < wide["top1_var"] <= 1
+
+
+def test_qsvm_unpickled_without_bandwidth_still_predicts(small):
+    _, y, _, _, A = small
+    m = QuantumKernelSVM(n_qubits=NQ).fit(A, y)
+    del m.__dict__["bandwidth"]  # artifacts saved before the parameter existed
+    clone = pickle.loads(pickle.dumps(m))
+    assert clone.bandwidth == 1.0 and clone.predict_proba(A[:3]).shape == (3, 2)
+
+
 def test_qsvm_fit_predict(small):
     _, y, _, _, A = small
     m = QuantumKernelSVM(n_qubits=NQ).fit(A, y)
@@ -164,6 +180,7 @@ def test_binary_metrics_single_class_auc_nan():
 
 def test_build_model_and_family():
     assert isinstance(build_model("qsvm", 4), QuantumKernelSVM)
+    assert isinstance(build_model("qsvm_c", 4), QuantumKernelSVM) and model_family("qsvm_c") == "quantum"
     assert isinstance(build_model("vqc", 4), VQCClassifier)
     assert isinstance(build_model("hybrid_qnn", 4), HybridQNNClassifier)
     assert [model_family(m) for m in ("logreg", "qsvm", "hybrid_qnn")] == ["classical", "quantum", "hybrid"]

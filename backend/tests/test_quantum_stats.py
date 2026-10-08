@@ -80,8 +80,32 @@ def test_compare_includes_secondary_metrics():
 
 def test_every_model_gets_the_same_tuning_budget():
     from sklearn.model_selection import ParameterGrid
-    from backend.ml.quantum.evaluate import ALL_MODELS, TUNING_GRIDS
-    assert {len(ParameterGrid(TUNING_GRIDS[m])) for m in ALL_MODELS} == {6}
+    from backend.ml.quantum.evaluate import ALL_MODELS, EXPERIMENT_MODELS, TUNING_GRIDS
+    assert set(TUNING_GRIDS) == set(ALL_MODELS + EXPERIMENT_MODELS)
+    assert {len(ParameterGrid(g)) for g in TUNING_GRIDS.values()} == {6}
+
+
+def _summary(path, y, scores):
+    import json
+    models = {m: {"oof": {"score": list(s)}, "metrics": {"auc": {"mean": 0.5}},
+                  "folds": [{"auc": a} for a in (0.5, 0.6, 0.7)]} for m, s in scores.items()}
+    path.write_text(json.dumps({"datasets": {"d": {"y": list(map(int, y)), "models": models}}}), encoding="utf-8")
+    return str(path)
+
+
+def test_compare_runs_across_files(tmp_path, capsys):
+    from backend.ml.quantum import stats
+    sig = lambda s: (1 / (1 + np.exp(-s))).tolist()  # noqa: E731
+    a = _summary(tmp_path / "a.json", Y, {"m": sig(GOOD)})
+    b = _summary(tmp_path / "b.json", Y, {"m": sig(NOISE), "n": sig(GOOD)})
+    out = tmp_path / "cmp.json"
+    stats.main(["--pair", f"{a}:m={b}:m", "--pair", f"{a}:m={b}:n", "--out", str(out)])
+    rows = __import__("json").loads(out.read_text(encoding="utf-8"))["d"]
+    assert rows[0]["significant"] and not rows[1]["significant"] and rows[0]["p_holm"] >= rows[0]["p"]
+    assert "dAUC" in capsys.readouterr().out
+    bad = _summary(tmp_path / "bad.json", Y[::-1], {"m": sig(GOOD)})
+    with pytest.raises(ValueError):
+        stats.compare_runs([(f"{a}:m", f"{bad}:m")])
 
 
 def test_nested_cv_tunes_inside_training_folds(monkeypatch):

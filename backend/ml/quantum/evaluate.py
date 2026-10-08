@@ -22,14 +22,18 @@ SPECIFICITY_TARGETS = (0.90, 0.95)
 INNER_FOLDS = 3
 TUNING_GRIDS = {
     **CLASSICAL_GRIDS,
-    "qsvm": {"model__C": [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]},
+    # E3: bandwidth s of the ZZ map at C = 1 (main QSVM) vs the C-only control at s = 1 (qsvm_c)
+    "qsvm": {"model__bandwidth": [0.1, 0.2, 0.35, 0.5, 0.75, 1.0]},
+    "qsvm_c": {"model__C": [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]},
     "vqc": {"model__lr": [0.01, 0.05, 0.1], "model__epochs": [20, 40]},
     "hybrid_qnn": {"model__lr": [0.01, 0.05, 0.1], "model__epochs": [20, 40]},
 }
+# Experiment-only variants (docs/OPTIMIZATION_PLAN.md); not part of the main comparison table.
+EXPERIMENT_MODELS = ["qsvm_c"]
 
 
 def build_model(name: str, n_qubits: int, seed: int = SEED, epochs: int = 40, n_layers: int = 2):
-    if name == "qsvm":
+    if name in ("qsvm", "qsvm_c"):
         return QuantumKernelSVM(n_qubits=n_qubits, seed=seed)
     if name == "vqc":
         return VQCClassifier(n_qubits=n_qubits, n_layers=n_layers, epochs=epochs, seed=seed)
@@ -39,7 +43,11 @@ def build_model(name: str, n_qubits: int, seed: int = SEED, epochs: int = 40, n_
 
 
 def model_family(name: str) -> str:
-    return "quantum" if name in ("qsvm", "vqc") else "hybrid" if name == "hybrid_qnn" else "classical"
+    if name.startswith(("qsvm", "vqc")):
+        return "quantum"
+    if name.startswith("hybrid_qnn"):
+        return "hybrid"
+    return "classical"
 
 
 def binary_metrics(y_true, y_pred, y_score) -> dict:
@@ -125,6 +133,8 @@ def fit_and_score(name, X_train, y_train, X_val, y_val, n_qubits, seed=SEED, met
     out = binary_metrics(y_val, pred, score)
     out.update(train_time_s=train_time, infer_ms_per_sample=infer_ms, train_accuracy=train_acc,
                gen_gap=train_acc - out["accuracy"], **tuning)
+    if hasattr(model, "kernel_spectrum_"):
+        out["kernel_spectrum"] = model.kernel_spectrum_
     return out, score, pre, model
 
 
