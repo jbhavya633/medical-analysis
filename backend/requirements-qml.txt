@@ -1,0 +1,16 @@
+# Version-pinned deps for the SIH26139 hybrid QML module, API and tests (tested on Python 3.13).
+# Install torch first (CPU wheel): pip install torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cpu
+numpy==2.5.3
+pandas==3.0.6
+scikit-learn==1.9.1
+joblib==1.6.0
+pennylane==0.45.1
+shap==0.52.0
+matplotlib==3.11.2
+pillow==12.3.0
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
+httpx==0.28.1
+pytest==9.1.1
+pytest-cov==7.1.0
