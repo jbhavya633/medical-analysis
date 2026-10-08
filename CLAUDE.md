@@ -31,3 +31,13 @@ Research prototype. Not a diagnostic tool.
 - Report real metrics only, from logged runs. Never tune on the test set or cherry-pick seeds.
 - Seed 42 everywhere. Keep the "not a diagnostic tool" notice in UI, README, API docs and deck.
 - Log autonomous decisions in DECISIONS.md.
+
+## Tools
+- pennylane skill (`.claude/skills/pennylane`): circuits, training, QNN layers (PennyLane 0.45.1, matches `requirements-qml.txt`).
+- qiskit MCP (`.mcp.json`, needs `uvx`): circuit transpilation and gate counts for the hardware-compatibility claim.
+- alphaxiv MCP (`.mcp.json`, OAuth via `/mcp`) / PubMed connector: citations and related work.
+- Clinical Trials / SNOMED CT connectors: clinical relevance and feature-to-concept mapping.
+- context7 (user plugin, not in `.mcp.json`): current FastAPI, React, PennyLane docs.
+- playwright (user plugin, not in `.mcp.json`): test and screenshot the Quantum Lab page (`http://localhost:3000/quantum-lab`).
+- Hugging Face connector: datasets and models.
+- claude.ai connectors (PubMed, Clinical Trials, SNOMED CT, Hugging Face) and plugins are per user: enable them in claude.ai settings, not here.

@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "qiskit": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "qiskit-mcp-server"
+      ],
+      "env": {}
+    },
+    "alphaxiv": {
+      "type": "http",
+      "url": "https://api.alphaxiv.org/mcp/v1"
+    }
+  }
+}
