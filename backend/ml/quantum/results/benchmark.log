@@ -1,0 +1,17 @@
+2026-10-08 22:25:01,321 INFO breast_cancer: 569 samples, 30 raw features, 37.3% positive
+2026-10-08 22:25:02,377 INFO logreg         acc 0.926±0.029 sens 0.858 spec 0.966 auc 0.979 train 0.01s (1s total)
+2026-10-08 22:25:03,584 INFO svm_rbf        acc 0.921±0.030 sens 0.873 spec 0.950 auc 0.978 train 0.00s (1s total)
+2026-10-08 22:25:08,211 INFO random_forest  acc 0.921±0.034 sens 0.897 spec 0.936 auc 0.977 train 0.34s (5s total)
+2026-10-08 22:25:13,880 INFO mlp            acc 0.926±0.030 sens 0.858 spec 0.966 auc 0.981 train 0.48s (6s total)
+2026-10-08 22:25:15,670 INFO qsvm           acc 0.886±0.031 sens 0.863 spec 0.899 auc 0.955 train 0.04s (2s total)
+2026-10-08 22:26:29,122 INFO vqc            acc 0.923±0.027 sens 0.849 spec 0.966 auc 0.980 train 9.18s (73s total)
+2026-10-08 22:27:53,817 INFO hybrid_qnn     acc 0.923±0.022 sens 0.863 spec 0.958 auc 0.980 train 10.46s (85s total)
+2026-10-08 22:28:20,751 INFO heart: 303 samples, 13 raw features, 45.9% positive
+2026-10-08 22:28:21,280 INFO logreg         acc 0.815±0.038 sens 0.770 spec 0.854 auc 0.901 train 0.01s (1s total)
+2026-10-08 22:28:22,080 INFO svm_rbf        acc 0.805±0.044 sens 0.748 spec 0.854 auc 0.902 train 0.01s (1s total)
+2026-10-08 22:28:25,987 INFO random_forest  acc 0.841±0.052 sens 0.805 spec 0.872 auc 0.900 train 0.30s (4s total)
+2026-10-08 22:28:29,751 INFO mlp            acc 0.818±0.038 sens 0.755 spec 0.872 auc 0.888 train 0.25s (4s total)
+2026-10-08 22:28:31,061 INFO qsvm           acc 0.762±0.040 sens 0.727 spec 0.793 auc 0.836 train 0.03s (1s total)
+2026-10-08 22:29:40,256 INFO vqc            acc 0.667±0.048 sens 0.583 spec 0.739 auc 0.755 train 8.68s (69s total)
+2026-10-08 22:31:06,016 INFO hybrid_qnn     acc 0.792±0.061 sens 0.762 spec 0.818 auc 0.861 train 10.53s (86s total)
+2026-10-08 22:31:32,342 INFO done in 391.0s -> C:\Users\mohdf\Desktop\medical-analysis\backend\ml\quantum\results

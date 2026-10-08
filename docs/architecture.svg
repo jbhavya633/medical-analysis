@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 560" role="img" aria-label="Hybrid pipeline: public data is preprocessed classically into one angle per qubit, fed to classical baselines and three quantum models on a simulator, evaluated with stratified 5-fold CV and explained, then persisted as JSON and served by FastAPI to the Quantum Lab UI." font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#52514e"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1040" height="560" fill="#fcfcfb"/>
+  <text x="20" y="30" font-size="15" font-weight="600" fill="#0b0b0b">SIH26139 hybrid quantum-classical pipeline</text>
+  <text x="20" y="48" fill="#52514e">Classical front-end feeds n_qubits features (default 6) to quantum models; every model sees the same folds and rows.</text>
+
+  <!-- 1. Data -->
+  <rect x="20" y="80" width="150" height="110" rx="8" fill="#ffffff" stroke="#a8a79f"/>
+  <text x="95" y="102" text-anchor="middle" font-weight="600" fill="#0b0b0b">Public data</text>
+  <text x="95" y="124" text-anchor="middle" fill="#52514e">UCI Breast Cancer</text>
+  <text x="95" y="140" text-anchor="middle" fill="#52514e">(569 x 30)</text>
+  <text x="95" y="160" text-anchor="middle" fill="#52514e">UCI Heart Cleveland</text>
+  <text x="95" y="176" text-anchor="middle" fill="#52514e">(303 x 13)</text>
+
+  <!-- 2. Preprocess -->
+  <rect x="210" y="80" width="190" height="110" rx="8" fill="#ffffff" stroke="#a8a79f"/>
+  <text x="305" y="102" text-anchor="middle" font-weight="600" fill="#0b0b0b">Classical preprocessing</text>
+  <text x="305" y="124" text-anchor="middle" fill="#52514e">median impute -> standardise</text>
+  <text x="305" y="142" text-anchor="middle" fill="#52514e">mutual-info select k = n_qubits</text>
+  <text x="305" y="160" text-anchor="middle" fill="#52514e">min-max to angles [0, pi]</text>
+  <text x="305" y="180" text-anchor="middle" fill="#2a78d6" font-size="11">fit on training fold only</text>
+  <line x1="170" y1="135" x2="208" y2="135" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="189" y="128" text-anchor="middle" fill="#52514e" font-size="10">X, y</text>
+
+  <!-- 3. Models -->
+  <rect x="450" y="70" width="300" height="88" rx="8" fill="#ffffff" stroke="#a8a79f"/>
+  <text x="600" y="92" text-anchor="middle" font-weight="600" fill="#0b0b0b">Classical baselines (scikit-learn)</text>
+  <text x="600" y="114" text-anchor="middle" fill="#52514e">logistic regression · RBF-SVM</text>
+  <text x="600" y="132" text-anchor="middle" fill="#52514e">random forest · MLP (16 hidden)</text>
+  <text x="600" y="150" text-anchor="middle" fill="#52514e" font-size="11">same k angle features</text>
+
+  <rect x="430" y="190" width="340" height="250" rx="10" fill="#f6f3fb" stroke="#4a3aa7" stroke-dasharray="5 4"/>
+  <text x="600" y="210" text-anchor="middle" font-weight="600" fill="#4a3aa7">PennyLane default.qubit simulator</text>
+  <text x="600" y="226" text-anchor="middle" fill="#4a3aa7" font-size="11">gates: RY, RZ, CNOT only (hardware-native set)</text>
+
+  <rect x="445" y="238" width="310" height="62" rx="6" fill="#ffffff" stroke="#a8a79f"/>
+  <text x="600" y="256" text-anchor="middle" font-weight="600" fill="#0b0b0b">Quantum-kernel SVM</text>
+  <text x="600" y="274" text-anchor="middle" fill="#52514e">ZZ map -> batched statevectors psi(x)</text>
+  <text x="600" y="291" text-anchor="middle" fill="#52514e">K = |psi_i . psi_j|^2 -> SVC(precomputed)</text>
+
+  <rect x="445" y="308" width="310" height="56" rx="6" fill="#ffffff" stroke="#a8a79f"/>
+  <text x="600" y="326" text-anchor="middle" font-weight="600" fill="#0b0b0b">Variational quantum classifier</text>
+  <text x="600" y="344" text-anchor="middle" fill="#52514e">RY encode -> 2 x (RY,RZ + CNOT ring) -> &lt;Z0&gt;</text>
+  <text x="600" y="358" text-anchor="middle" fill="#52514e" font-size="11">Adam + BCE via torch backprop</text>
+
+  <rect x="445" y="372" width="310" height="56" rx="6" fill="#ffffff" stroke="#a8a79f"/>
+  <text x="600" y="390" text-anchor="middle" font-weight="600" fill="#0b0b0b">Hybrid QNN</text>
+  <text x="600" y="408" text-anchor="middle" fill="#52514e">Linear -> PQC &lt;Z&gt; on all qubits -> Linear</text>
+  <text x="600" y="422" text-anchor="middle" fill="#52514e" font-size="11">TorchLayer, trained end to end</text>
+
+  <line x1="400" y1="120" x2="448" y2="114" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="400" y1="150" x2="428" y2="300" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="430" y="200" text-anchor="end" fill="#52514e" font-size="10">angles</text>
+
+  <!-- 4. Evaluate + explain -->
+  <rect x="810" y="80" width="210" height="150" rx="8" fill="#ffffff" stroke="#a8a79f"/>
+  <text x="915" y="102" text-anchor="middle" font-weight="600" fill="#0b0b0b">Evaluate</text>
+  <text x="915" y="124" text-anchor="middle" fill="#52514e">stratified 5-fold, seed 42</text>
+  <text x="915" y="142" text-anchor="middle" fill="#52514e">acc · sens · spec · AUC · F1</text>
+  <text x="915" y="160" text-anchor="middle" fill="#52514e">train s · inference ms/sample</text>
+  <text x="915" y="178" text-anchor="middle" fill="#52514e">train-val gap · learning curve</text>
+  <text x="915" y="196" text-anchor="middle" fill="#52514e">qubits · depth · params</text>
+  <text x="915" y="218" text-anchor="middle" fill="#52514e" font-size="11">training folds capped at 200 rows</text>
+
+  <rect x="810" y="250" width="210" height="110" rx="8" fill="#ffffff" stroke="#a8a79f"/>
+  <text x="915" y="272" text-anchor="middle" font-weight="600" fill="#0b0b0b">Explain (held-out 20%)</text>
+  <text x="915" y="294" text-anchor="middle" fill="#52514e">permutation importance</text>
+  <text x="915" y="312" text-anchor="middle" fill="#52514e">SHAP KernelExplainer</text>
+  <text x="915" y="330" text-anchor="middle" fill="#52514e">kernel-target alignment</text>
+  <text x="915" y="348" text-anchor="middle" fill="#52514e">feature-map sensitivity</text>
+
+  <line x1="750" y1="114" x2="808" y2="140" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="770" y1="300" x2="808" y2="190" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="790" y="236" text-anchor="middle" fill="#52514e" font-size="10">P(disease)</text>
+  <line x1="915" y1="230" x2="915" y2="248" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 5. Persist / serve / UI -->
+  <rect x="810" y="400" width="210" height="62" rx="8" fill="#ffffff" stroke="#a8a79f"/>
+  <text x="915" y="422" text-anchor="middle" font-weight="600" fill="#0b0b0b">results/ (committed)</text>
+  <text x="915" y="440" text-anchor="middle" fill="#52514e">summary.json · *.png · log</text>
+  <text x="915" y="456" text-anchor="middle" fill="#52514e">models/*.joblib (&lt; 5 MB)</text>
+  <line x1="915" y1="360" x2="915" y2="398" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="922" y="384" fill="#52514e" font-size="10">writes</text>
+
+  <rect x="450" y="476" width="300" height="62" rx="8" fill="#ffffff" stroke="#a8a79f"/>
+  <text x="600" y="498" text-anchor="middle" font-weight="600" fill="#0b0b0b">FastAPI /api/qml</text>
+  <text x="600" y="516" text-anchor="middle" fill="#52514e">/benchmark · /train (job) · /predict</text>
+  <text x="600" y="531" text-anchor="middle" fill="#52514e" font-size="11">router delegates to service.py</text>
+  <line x1="808" y1="440" x2="752" y2="500" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="792" y="482" text-anchor="middle" fill="#52514e" font-size="10">reads</text>
+
+  <rect x="20" y="476" width="380" height="62" rx="8" fill="#ffffff" stroke="#a8a79f"/>
+  <text x="210" y="498" text-anchor="middle" font-weight="600" fill="#0b0b0b">Quantum Lab (React)</text>
+  <text x="210" y="516" text-anchor="middle" fill="#52514e">comparison table · ROC · learning curves · SHAP</text>
+  <text x="210" y="531" text-anchor="middle" fill="#b45309" font-size="11">Research prototype - not a diagnostic tool</text>
+  <line x1="448" y1="507" x2="402" y2="507" stroke="#52514e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="425" y="500" text-anchor="middle" fill="#52514e" font-size="10">JSON</text>
+</svg>
