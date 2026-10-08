@@ -13,6 +13,7 @@ const LabAnalytics = lazy(() => import('./pages/LabAnalytics').then(m => ({ defa
 const ClinicalDecisionSupport = lazy(() => import('./pages/ClinicalDecisionSupport').then(m => ({ default: m.ClinicalDecisionSupport })))
 const ECGAnalyzer = lazy(() => import('./pages/ECGAnalyzer').then(m => ({ default: m.ECGAnalyzer })))
 const AIAssistant = lazy(() => import('./pages/AIAssistant').then(m => ({ default: m.AIAssistant })))
+const QuantumLab = lazy(() => import('./pages/QuantumLab').then(m => ({ default: m.QuantumLab })))
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
 const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="/cds/:patientId?" element={<ClinicalDecisionSupport />} />
             <Route path="/ecg/:patientId?" element={<ECGAnalyzer />} />
             <Route path="/ai-assistant" element={<AIAssistant />} />
+            <Route path="/quantum-lab" element={<QuantumLab />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />

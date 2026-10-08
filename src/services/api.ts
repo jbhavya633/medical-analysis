@@ -350,3 +350,76 @@ export const systemApi = {
 }
 
 import { User, Patient, PaginatedResponse, LabResult, ImagingStudy, ImagingSeries, ImagingInstance, ECGStudy, VitalSigns, ClinicalNote, Medication, Condition, AIInsight, RiskScore, ReferenceRange, LabTrend, LabPanel, LabCategory, AIAnalysisJob, AIAnalysisResult, Model, ECGMeasurements, ECGAIAnalysisJob, ECGAIAnalysisResult, ECGComparison, AIInferenceResult, AIInsightFeedback, AIExplanation, ClinicalGuideline, DrugInteraction, RiskScoreDefinition, AllergyCheckResult, OrderSet, SystemMetrics, SystemHealth, AuditLog, Notification } from '../types'
+// Hybrid QML research prototype (SIH26139) - not a diagnostic tool
+export interface QmlMetricStat { mean: number; std: number }
+export interface QmlModelResult {
+  family: 'classical' | 'quantum' | 'hybrid'
+  metrics: Record<string, QmlMetricStat>
+  roc: { fpr: number[]; tpr: number[] }
+  learning_curve: { n_train: number; train_accuracy: number; val_accuracy: number }[]
+  n_qubits: number | null
+  circuit_depth: number | null
+  n_params: number
+  holdout: Record<string, number>
+  explain: {
+    selected_features: string[]
+    permutation_importance: Record<string, number>
+    shap_mean_abs: Record<string, number> | null
+    kernel_alignment?: number
+    feature_map_sensitivity?: Record<string, number>
+  }
+}
+export interface QmlBenchmark {
+  generated_at: string
+  git_commit: string | null
+  runtime_s: number
+  disclaimer: string
+  config: Record<string, unknown>
+  trained_models: string[]
+  datasets: Record<string, {
+    info: { title: string; positive_class: string; source: string; licence: string; url: string }
+    n_samples: number
+    positive_rate: number
+    models: Record<string, QmlModelResult>
+  }>
+}
+export interface QmlJob {
+  job_id: string
+  status: 'queued' | 'running' | 'done' | 'failed'
+  dataset: string
+  model: string
+  n_qubits: number
+  model_id?: string
+  error?: string
+  holdout_metrics?: Record<string, number>
+}
+export interface QmlModelInfo {
+  model_id: string
+  dataset: string
+  model: string
+  n_qubits: number
+  feature_names: string[]
+  selected_features: string[]
+  holdout_metrics: Record<string, number>
+}
+export interface QmlPrediction {
+  model_id: string
+  probability_disease: number
+  predicted_label: number
+  positive_class: string
+  explanation: { feature: string; encoded_value: number; shap: number }[] | null
+  disclaimer: string
+}
+
+// The /api/qml endpoints return bare JSON (no ApiResponse envelope).
+const bare = <T,>(p: Promise<unknown>) => p as Promise<T>
+
+export const qmlApi = {
+  getBenchmark: () => bare<QmlBenchmark>(api.get('/qml/benchmark')),
+  train: (dataset: string, model: string, nQubits: number) =>
+    bare<QmlJob>(api.post('/qml/train', { dataset, model, n_qubits: nQubits })),
+  getJob: (jobId: string) => bare<QmlJob>(api.get(`/qml/jobs/${jobId}`)),
+  getModel: (modelId: string) => bare<QmlModelInfo>(api.get(`/qml/models/${modelId}`)),
+  predict: (modelId: string, features: (number | null)[]) =>
+    bare<QmlPrediction>(api.post('/qml/predict', { model_id: modelId, features })),
+}

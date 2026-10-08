@@ -3,7 +3,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Scan, FlaskConical, Stethoscope, Activity,
   Bot, Settings, LogOut, Moon, Sun, Monitor, Bell, Search, Menu, X,
-  ChevronLeft, Heart, Wifi, WifiOff, Loader2, CheckCircle
+  ChevronLeft, Heart, Wifi, WifiOff, Loader2, CheckCircle, Atom
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../contexts/ThemeContext'
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { to: '/cds', icon: Stethoscope, label: 'Clinical DS' },
   { to: '/ecg', icon: Activity, label: 'ECG Analyzer' },
   { to: '/ai-assistant', icon: Bot, label: 'AI Assistant' },
+  { to: '/quantum-lab', icon: Atom, label: 'Quantum Lab' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
