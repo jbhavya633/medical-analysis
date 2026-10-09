@@ -1,0 +1,108 @@
+{
+ "breast_cancer": [
+  {
+   "a": "qsvm",
+   "b": "qsvm",
+   "a_run": "backend/ml/quantum/results/experiments/e3_qsvm_bandwidth/summary.json",
+   "b_run": "backend/ml/quantum/results/experiments/e0_untuned/summary.json",
+   "auc_a": 0.9809139938684648,
+   "auc_b": 0.9553551715114112,
+   "delta": 0.03299904867607428,
+   "ci95": [
+    0.017374048676074352,
+    0.05030240869932879
+   ],
+   "p": 0.0,
+   "p_wilcoxon": 0.1875,
+   "p_holm": 0.0,
+   "significant": true
+  },
+  {
+   "a": "qsvm",
+   "b": "qsvm_c",
+   "a_run": "backend/ml/quantum/results/experiments/e3_qsvm_bandwidth/summary.json",
+   "b_run": "backend/ml/quantum/results/experiments/e3_qsvm_bandwidth/summary.json",
+   "auc_a": 0.9809139938684648,
+   "auc_b": 0.9564688302077755,
+   "delta": 0.03396358543417377,
+   "ci95": [
+    0.01858913376671433,
+    0.05088261719782261
+   ],
+   "p": 0.0,
+   "p_wilcoxon": 0.1875,
+   "p_holm": 0.0,
+   "significant": true
+  },
+  {
+   "a": "qsvm_c",
+   "b": "qsvm",
+   "a_run": "backend/ml/quantum/results/experiments/e3_qsvm_bandwidth/summary.json",
+   "b_run": "backend/ml/quantum/results/experiments/e0_untuned/summary.json",
+   "auc_a": 0.9564688302077755,
+   "auc_b": 0.9553551715114112,
+   "delta": -0.0009645367580994879,
+   "ci95": [
+    -0.002867514930500495,
+    0.0008063130912742948
+   ],
+   "p": 0.317,
+   "p_wilcoxon": 1.0,
+   "p_holm": 0.317,
+   "significant": false
+  }
+ ],
+ "heart": [
+  {
+   "a": "qsvm",
+   "b": "qsvm",
+   "a_run": "backend/ml/quantum/results/experiments/e3_qsvm_bandwidth/summary.json",
+   "b_run": "backend/ml/quantum/results/experiments/e0_untuned/summary.json",
+   "auc_a": 0.8982095258136924,
+   "auc_b": 0.8351175444925445,
+   "delta": 0.0539787682049484,
+   "ci95": [
+    0.015417726794174438,
+    0.09605139059484123
+   ],
+   "p": 0.008,
+   "p_wilcoxon": 0.125,
+   "p_holm": 0.016,
+   "significant": true
+  },
+  {
+   "a": "qsvm",
+   "b": "qsvm_c",
+   "a_run": "backend/ml/quantum/results/experiments/e3_qsvm_bandwidth/summary.json",
+   "b_run": "backend/ml/quantum/results/experiments/e3_qsvm_bandwidth/summary.json",
+   "auc_a": 0.8982095258136924,
+   "auc_b": 0.8312094155844155,
+   "delta": 0.06847692577645215,
+   "ci95": [
+    0.026451460782593462,
+    0.11384288910335152
+   ],
+   "p": 0.0,
+   "p_wilcoxon": 0.125,
+   "p_holm": 0.0,
+   "significant": true
+  },
+  {
+   "a": "qsvm_c",
+   "b": "qsvm",
+   "a_run": "backend/ml/quantum/results/experiments/e3_qsvm_bandwidth/summary.json",
+   "b_run": "backend/ml/quantum/results/experiments/e0_untuned/summary.json",
+   "auc_a": 0.8312094155844155,
+   "auc_b": 0.8351175444925445,
+   "delta": -0.014498157571503745,
+   "ci95": [
+    -0.03772811019477111,
+    0.010090586067731177
+   ],
+   "p": 0.222,
+   "p_wilcoxon": 1.0,
+   "p_holm": 0.222,
+   "significant": false
+  }
+ ]
+}
